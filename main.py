@@ -31,8 +31,6 @@ warns = defaultdict(list)
 user_levels = defaultdict(int)
 user_xp = defaultdict(int)
 daily_cooldown = {}
-cooldown_dict = defaultdict(int)
-slowmode_settings = {}
 
 async def load_roasts():
     global roast_list
@@ -74,13 +72,17 @@ async def on_message(message):
         if roast_list:
             await message.channel.send(random.choice(roast_list))
 
+    if message.mentions:
+        for user in message.mentions:
+            if user.id in afk_users:
+                await message.channel.send(f"⏳ {user.mention} đang AFK: {afk_users[user.id]}")
+
     await bot.process_commands(message)
 
 @bot.event
 async def on_command_completion(ctx):
     command_usage[ctx.command.name] += 1
 
-# ===================== LỆNH CỨU HỘ =====================
 @bot.command()
 async def bothelp(ctx):
     embed = discord.Embed(
@@ -89,7 +91,7 @@ async def bothelp(ctx):
         color=0x00ff88
     )
     embed.add_field(name="🛠️ CƠ BẢN", value="`!ping` - Độ trễ\n`!bothelp` - Trợ giúp\n`!uptime` - Thời gian hoạt động\n`!stats` - Thống kê bot", inline=False)
-    embed.add_field(name="🔥 CHỬI & SPAM", value="`!spam @user [số lần]` - Chửi + tag (tối đa 1000)\n`!roastmode` - Bật/tắt auto roast (owner)\n`!reload` - Tải lại danh sách chửi (owner)", inline=False)
+    embed.add_field(name="🔥 CHỬI & SPAM", value="`!spam @user [số lần]` - Chửi + tag (mặc định 1000)\n`!roastmode` - Bật/tắt auto roast (owner)\n`!reload` - Tải lại danh sách chửi (owner)", inline=False)
     embed.add_field(name="🎮 GIẢI TRÍ", value="`!8ball <câu hỏi>` - Bóng ma thuật\n`!flip` - Tung đồng xu\n`!roll` - Random 1-100\n`!rps <kéo/búa/bao>` - Oẳn tù tì\n`!meme` - Ảnh meme ngẫu nhiên", inline=False)
     embed.add_field(name="📁 TIỆN ÍCH", value="`!avatar @user` - Xem avatar\n`!serverinfo` - Thông tin server\n`!userinfo @user` - Thông tin user\n`!snipe` - Lấy tin nhắn bị xóa\n`!afk <lý do>` - Đặt AFK\n`!remind <time> <msg>` - Nhắc nhở\n`!poll <câu hỏi>` - Tạo poll\n`!slowmode <giây>` - Đặt slowmode", inline=False)
     embed.add_field(name="🔒 ADMIN (Owner)", value="`!clear <số>` - Xóa tin nhắn\n`!say <nội dung>` - Bot nói\n`!embed <title>|<desc>` - Gửi embed\n`!kick @user` - Kick\n`!ban @user` - Ban\n`!lock` - Khóa kênh\n`!unlock` - Mở khóa\n`!warn @user <lý do>` - Cảnh cáo\n`!warns @user` - Xem cảnh cáo", inline=False)
@@ -120,7 +122,6 @@ async def stats(ctx):
     embed.add_field(name="📅 Thời gian chạy", value=f"{datetime.datetime.now() - bot_start_time}", inline=False)
     await ctx.send(embed=embed)
 
-# ===================== CHỬI & SPAM =====================
 @bot.command()
 async def reload(ctx):
     if ctx.author.id != OWNER_ID:
@@ -139,9 +140,9 @@ async def roastmode(ctx):
     await ctx.send(f"🔥 Chế độ auto roast: {'BẬT' if roast_mode else 'TẮT'}")
 
 @bot.command()
-async def spam(ctx, member: discord.Member = None, count: int = 5):
+async def spam(ctx, member: discord.Member = None, count: int = 1000):
     if not member:
-        await ctx.send("❌ Cần tag người dùng! Ví dụ: !spam @user 10")
+        await ctx.send("❌ Cần tag người dùng! Ví dụ: !spam @user 500")
         return
     if count < 1:
         await ctx.send("❌ Số lần spam phải >= 1")
@@ -154,10 +155,13 @@ async def spam(ctx, member: discord.Member = None, count: int = 5):
         return
 
     await ctx.send(f"🔥 Bắt đầu spam {count} lần cho {member.mention}...")
-    for i in range(count):
-        insult = random.choice(roast_list)
-        await ctx.send(f"{insult} {member.mention}")
-        await asyncio.sleep(0.5)  # delay nhẹ để tránh rate limit
+    batch_size = 10
+    for i in range(0, count, batch_size):
+        batch = min(batch_size, count - i)
+        for _ in range(batch):
+            insult = random.choice(roast_list)
+            await ctx.send(f"{insult} {member.mention}")
+        await asyncio.sleep(1)
 
     await ctx.send(f"✅ Đã spam {count} lần cho {member.mention}!")
 
@@ -166,7 +170,6 @@ async def spam_error(ctx, error):
     if isinstance(error, commands.BadArgument):
         await ctx.send("❌ Lỗi cú pháp: !spam @user [số lần]")
 
-# ===================== GIẢI TRÍ =====================
 @bot.command()
 async def eightball(ctx, *, question):
     responses = ["Có", "Không", "Có thể", "Chắc chắn", "Không đời nào", "Hỏi lại sau", "Có lẽ", "Tôi không biết", "Chắc chắn rồi", "Đừng hy vọng"]
@@ -209,7 +212,6 @@ async def meme(ctx):
     ]
     await ctx.send(random.choice(memes))
 
-# ===================== TIỆN ÍCH =====================
 @bot.command()
 async def avatar(ctx, member: discord.Member = None):
     if not member:
@@ -368,7 +370,6 @@ async def warns(ctx, member: discord.Member = None):
         embed.add_field(name=f"Lần {i}", value=f"Lý do: {w['reason']}\nNgười cảnh cáo: <@{w['by']}>\nThời gian: {w['time'].strftime('%H:%M %d/%m/%Y')}", inline=False)
     await ctx.send(embed=embed)
 
-# ===================== LỆNH ADMIN KHÁC =====================
 @bot.command()
 async def clear(ctx, amount: int = 5):
     if ctx.author.id != OWNER_ID:
@@ -404,7 +405,6 @@ async def embed(ctx, *, args):
     except ValueError:
         await ctx.send("❌ Cú pháp: !embed Tiêu đề | Nội dung")
 
-# ===================== HỆ THỐNG LEVEL =====================
 @bot.command()
 async def level(ctx):
     user = ctx.author
@@ -462,11 +462,9 @@ async def leaderboard(ctx):
         embed.add_field(name=f"#{i} {name}", value=f"Level {user_levels[user_id]} • {xp} XP", inline=False)
     await ctx.send(embed=embed)
 
-# ===================== LỆNH KHÁC =====================
 @bot.command()
 async def calc(ctx, *, expression):
     try:
-        # Loại bỏ các ký tự nguy hiểm
         expression = re.sub(r'[^0-9+\-*/().%\s]', '', expression)
         result = eval(expression)
         await ctx.send(f"🧮 Kết quả: `{result}`")
@@ -500,7 +498,6 @@ async def support(ctx):
     embed.add_field(name="Server hỗ trợ", value="[Link Discord](https://discord.gg/your_server)", inline=False)
     await ctx.send(embed=embed)
 
-# ===================== CHẠY BOT =====================
 if __name__ == "__main__":
     if TOKEN:
         try:
