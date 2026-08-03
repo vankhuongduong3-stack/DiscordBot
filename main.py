@@ -4,7 +4,9 @@ from discord.ext import commands
 import random
 
 
-TOKEN = "MTUzMzYzNDc1MTYwNzQ3MjEyOA.GlwRxb.npQ6WxD1efeoQ0o0GHl6nh_mLRvqkOQFJONlvc"
+import os
+
+TOKEN = os.getenv("DISCORD_TOKE")
 
 OWNER_ID = 1531882555664629861
 
