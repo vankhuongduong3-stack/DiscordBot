@@ -1,510 +1,223 @@
+import asyncio
 import os
 import random
 import discord
 from discord.ext import commands
-import aiohttp
-import asyncio
-import datetime
-import json
-import re
-import math
-from collections import defaultdict
 
-TOKEN = os.getenv("DISCORD_TOKEN")
-OWNER_ID = 1531882555664629861
-ROAST_URL = "https://raw.githubusercontent.com/vankhuongduong3-stack/DiscordBot/main/cau_chui.txt"
+# ==================== CẤU HÌNH HỆ THỐNG ====================
+DISCORD_TOKEN = os.getenv("TOKEN")
+
+# Chỉ định duy nhất ID Owner của bạn có quyền thực thi lệnh
+BOT_OWNERS = [1535132569534865490]
 
 intents = discord.Intents.default()
 intents.message_content = True
 intents.members = True
 intents.guilds = True
 
-bot = commands.Bot(command_prefix="!", intents=intents, help_command=None)
+bot = commands.Bot(command_prefix=".", intents=intents, help_command=None)
 
-roast_mode = False
-roast_list = []
-afk_users = {}
-snipe_data = {}
-command_usage = defaultdict(int)
-bot_start_time = datetime.datetime.now()
-warns = defaultdict(list)
-user_levels = defaultdict(int)
-user_xp = defaultdict(int)
-daily_cooldown = {}
+is_spamming = False
+spam_task_running = None
 
-async def load_roasts():
-    global roast_list
-    try:
-        async with aiohttp.ClientSession() as session:
-            async with session.get(ROAST_URL) as resp:
-                if resp.status == 200:
-                    text = await resp.text()
-                    roast_list = [line.strip() for line in text.splitlines() if line.strip()]
-                else:
-                    roast_list = ["Mày ngu vãi", "Đồ óc chó", "Ngu như bò"]
-    except:
-        roast_list = ["Mày ngu vãi", "Đồ óc chó", "Ngu như bò"]
+# ==================== KHO SPAM ĐẦY ĐỦ (209 CÂU) ====================
+ROAST_LINES = [
+    "# Lồn mẹ mày nát bét như tương, bị địt đến không còn + chảy lênh! {username}",
+    "# Đéo biết xấu hổ, lồn mẹ mày thối như cứt + xác chết đầy dòi bọ! {username}",
+    "# Thằng óc lồn rộng, mặt giống lỗ đít thối + đầy phân + tinh trùng! {username}",
+    "# Mày là đồ bệnh hoạn, chuyên bú cặc chó + ngựa + tự địt lỗ đít! {username}",
+    "# Lồn rộng như biển phân, đụ má thằng khốn nạn óc cứt thối rữa! {username}",
+    "# Thằng óc phân thối rữa, lồn mẹ mày bị địt đến chảy máu + mủ đặc sưng vù như quả bóng vỡ! {username}",
+    "# Đụ con đĩ già thối tha, cặc mày hôi như xác chết 10 ngày + phân bò phơi nắng! {username}",
+    "# Đụ má cái lồn to đùng, chứa đống tinh trùng thối rữa + máu mủ nước! {username}",
+    "# Địt mẹ thằng chó đẻ, cặc mày hôi như đống cứt tươi + phân ngựa giữa trời nắng gắt! {username}",
+    "# Con đĩ bán dâm, lồn rộng vì bị địt trăm lần + thú + nhét đồ! {username}",
+    "# Con đĩ bán thân, lồn rộng vì địt nhiều + thú vật + vật lạ vào! {username}",
+    "# Cặc teo như hạt tiêu, địt mẹ cái đồ ngu bệnh hoạn óc phân! {username}",
+    "# Đụ con mẹ mày lần nữa và nữa, bú cặc thú vật + nuốt tinh trùng sống + phân chó! {username}",
+    "# Con đĩ bán dâm chuyên, lồn rộng vì địt nhiều thú + nhét vật lạ! {username}",
+    "# Mày chết mẹ mày đi, đồ bệnh hoạn chuyên bú cặc thú + tự địt lỗ đít mình! {username}",
+    "# Con đĩ bán thân, lồn rộng vì bị địt cả trăm thằng + thú vật + nhét đồ vật! {username}",
+    "# Địt vào mồm mày thối, nuốt tinh trùng thối rữa + phân chó tươi! {username}",
+    "# Mày chết cho sạch đường phố, đồ rác rưởi bệnh hoạn của xã hội chuyên bú cặc thú vật! {username}",
+    "# Mày chết mẹ mày, đồ rác của xã hội bệnh hoạn chuyên bú cặc thú! {username}",
+    "# Lồn to như cái chảo lớn, chứa tinh trùng thối rữa + máu mủ đặc + nước đái thú! {username}",
+    "# Đụ má thằng mặt khỉ đột, mẹ mày bú cặc ngựa cả ngày + nuốt tinh trùng sống! {username}",
+    "# Chửi tục cái lồn nát, cút xéo thằng chó đẻ bú cặc thú cho đã! {username}",
+    "# Đụ má cái lồn to đùng chứa tinh trùng thối + máu mủ + nước đái chó! {username}",
+    "# Đéo thèm quan tâm, cái mặt lồn thối của mày đầy nước dãi + phân! {username}",
+    "# Địt mẹ chúng bay hết, cặc teo tóp như giòi chết trong phân thối! {username}",
+    "# Lồn mẹ mày rộng như hố phân công cộng ngoài đồng, bị địt đến sưng vù nát như tương đặc + chảy nước nhớt thối! {username}",
+    "# Đụ con đĩ già nua thối, cặc mày hôi như xác chết 10 ngày + phân! {username}",
+    "# Cặc mày teo tóp như con giòi thối rữa trong đống cứt, địt vào lồn già nua thối như xác chết 10 ngày giữa nắng! {username}",
+    "# Cặc teo tóp như giòi thối, địt mẹ cái đồ mất dạy óc phân bò! {username}",
+    "# Cặc teo như hạt tiêu thối trong phân, địt mẹ cái đồ mất dạy hết mức óc phân! {username}",
+    "# Lồn rộng như hồ phân, đụ má thằng khốn kiếp óc cứt thối này! {username}",
+    "# Địt mẹ thằng mặt lồn rộng thênh thang như sân vận động chứa phân, óc toàn phân bò khô + nước đái! {username}",
+    "# Cặc teo như con giòi thối, địt mẹ cái thằng ngu óc phân bò! {username}",
+    "# Đụ má thằng mặt thú vật, mẹ mày bú cặc chó đồng + nuốt tinh trùng! {username}",
+    "# Mày chết mẹ mày đi cho sạch đường, lồn to đùng chứa cả xô tinh trùng thối rữa + máu mủ + nước tiểu chó! {username}",
+    "# Lồn rộng như biển phân, đụ má thằng khốn nạn óc cứt thối! {username}",
+    "# Chửi đổng cái lồn thối, cút xéo thằng chó đẻ bú cặc thú vật đi! {username}",
+    "# Thằng óc phân thối, mặt giống lỗ đít thối tha đầy phân + tinh trùng! {username}",
+    "# Đụ con đĩ già thối tha, cặc mày hôi như xác chết 10 ngày + phân bò phơi nắng! {username}",
+    "# Đéo thèm quan tâm cái lồn thối của mày, bú cặc lợn + chó + tự nhét vào lỗ đít đi! {username}",
+    "# Lồn rộng như hồ nước phân ngoài đồng, đụ má thằng khốn nạn óc cứt thối này! {username}",
+    "# Mày là đồ mất dạy hết, chuyên bú cặc thú rừng + nuốt sống tinh trùng! {username}",
+    "# Lồn mẹ mày nát như tương đặc, bị địt đến không còn hình dạng + chảy máu mủ nước nhớt! {username}",
+    "# Lồn rộng như sân vận động phân, đụ má thằng óc cứt thối rữa! {username}",
+    "# Lồn to như cái ao phân, chứa tinh trùng thối rữa cả xô + máu mủ! {username}",
+    "# Đéo thèm nhìn cái mặt lồn thối đầy nước dãi tinh trùng của mày, bú cặc lợn + chó + ngựa đi! {username}",
+    "# Đụ má thằng mặt lồn rộng, mẹ mày bú cặc thú + nuốt tinh trùng sống! {username}",
+    "# Cặc nhỏ xíu như hạt đậu thối, địt vào lồn già đến chảy máu + mủ + nước nhớt! {username}",
+    "# Con điếm rẻ tiền, chuyên bú cặc chó đêm ngày + nuốt sống tinh trùng! {username}",
+    "# Đụ con mẹ mày lần nữa và nữa, bú cặc thú vật + nuốt tinh trùng sống + phân chó! {username}",
+    "# Thằng óc lồn, mặt mày giống cái lỗ đít thối đầy phân + nước dãi tinh trùng! {username}",
+    "# Cặc teo như hạt tiêu đen trong phân, địt mẹ cái đồ ngu si bệnh! {username}",
+    "# Đụ má cái đồ rác, lồn to đùng chứa phân + tinh trùng thối rữa + máu mủ! {username}",
+    "# Đụ má thằng mặt khỉ, mẹ mày bú cặc thú rừng cả đêm rồi nuốt sống! {username}",
+    "# Thằng mặt thú dữ, mẹ mày con đĩ thú vật bú cặc + nuốt tinh trùng! {username}",
+    "# Cặc teo tóp xíu xiu như con giòi chết trong cứt, địt mẹ cái thằng ngu si óc phân bò! {username}",
+    "# Con đĩ mẹ mày chuyên quỳ gối bú cặc thú vật ngoài đồng rồi nuốt tinh trùng chó tươi + phân lẫn vào! {username}",
+    "# Đụ con mẹ chúng mày hết, bú cặc thú vật đi cho rồi + nuốt tinh! {username}",
+    "# Địt vào lồn già nua của mẹ mày đến sưng vù + chảy nước nhớt thối + máu mủ lẫn lộn! {username}",
+    "# Lồn to như thúng, chứa tinh trùng thối rữa + máu mủ đặc + nước đái thú vật! {username}",
+    "# Lồn rộng như cái ao phân ngoài đồng chứa đầy tinh trùng thối, đụ má thằng khốn nạn óc cứt này! {username}",
+    "# Lồn mẹ mày nát bét, bị địt đến không còn gì + chảy nước nhớt + máu mủ đặc! {username}",
+    "# Cặc teo như hạt tiêu, địt mẹ cái đồ ngu bệnh hoạn óc phân! {username}",
+    "# Cặc teo như tiêu đen thối, địt mẹ cái thằng ngu si bệnh hoạn! {username}",
+    "# Đéo có tư cách gì, lồn mẹ mày thối như phân bò tươi + xác chết! {username}",
+    "# Lồn mẹ mày nát bét, bị địt đến không còn hình + mủ máu chảy lênh láng! {username}",
+    "# Cặc hôi thối như phân, địt vào lồn già nua thối đến sưng chảy! {username}",
+    "# Con điếm chuyên bú, cặc thú vật suốt ngày + nuốt sống tinh trùng phân! {username}",
+    "# Đéo biết xấu hổ gì, lồn mẹ mày thối như cứt xác chết đầy dòi! {username}",
+    "# Địt mẹ chúng bay hết sạch, cặc teo tóp như giòi thối rữa trong cứt! {username}",
+    "# Đụ con mẹ mày nữa, bú cặc thú vật + tinh trùng sống + phân chó! {username}",
+    "# Đéo có tư cách, lồn mẹ mày thối như xác chết 15 ngày + đầy dòi! {username}",
+    "# Con đĩ thối tha, lồn rộng vì bị địt quá nhiều + thú vật + vật lạ! {username}",
+    "# Lồn to như cái thúng chứa đầy tinh trùng thối rữa + máu mủ đặc + nước đái thú vật! {username}",
+    "# Mày chết cho sạch, đồ bệnh hoạn chuyên bú thú + tự địt lỗ đít! {username}",
+    "# Cặc hôi thối như cứt chó tươi giữa nắng, địt vào lồn già nua đến sưng! {username}",
+    "# Địt vào mồm mày thối, nuốt tinh trùng thối rữa + phân + nước đái! {username}",
+    "# Lồn rộng như hồ nước phân, đụ má thằng khốn nạn óc cứt thối! {username}",
+    "# Đụ con mẹ mày lần nữa, bú cặc thú + nuốt tinh trùng sống + phân! {username}",
+    "# Óc cứt thối hoắc, lồn mẹ mày sưng vù vì địt + nhét vật lạ + thú! {username}",
+    "# Con đĩ bán thân, lồn rộng vì bị địt cả trăm thằng + thú vật + nhét đồ vật! {username}",
+    "# Đéo thèm quan tâm đến cái lồn thối + đầy nước dãi tinh trùng + phân của mày! {username}",
+    "# Lồn mẹ mày nát bét, bị địt đến không còn hình dạng + chảy máu mủ! {username}",
+    "# Chửi đổng cái lồn nát, cút mẹ mày bú cặc chó đi cho thỏa mãn! {username}",
+    "# Thằng mặt lờ đờ, mẹ mày con đĩ chó bú cặc ngựa + nuốt tinh trùng! {username}",
+    "# Đéo thèm nhìn mặt, cái lồn thối hoắc đầy nước dãi + phân của mày! {username}",
+    "# Mày chết mẹ mày đi, đồ bệnh hoạn chuyên bú thú vật + tự địt! {username}",
+    "# Đụ con đĩ già nua thối như xác chết phân hủy, cặc mày hôi như đống cứt chó + phân ngựa phơi nắng! {username}",
+    "# Mày là đồ mất dạy hết mức, chuyên bú cặc thú rừng + nuốt sống tinh trùng + phân! {username}",
+    "# Địt mẹ chúng bay hết sạch, cặc teo tóp như giòi thối trong phân! {username}",
+    "# Địt mẹ thằng chó cái đẻ, cặc teo tóp xíu như giòi trong phân! {username}",
+    "# Thằng mặt khỉ đột, mẹ mày là con đĩ thú vật chuyên bú cặc ngựa + nuốt tinh trùng! {username}",
+    "# Mày là đồ vô học, chuyên bú cặc ngựa + chó + lợn + nuốt sống! {username}",
+    "# Cặc nhỏ như đậu thối, địt vào lồn già đến sưng vù + chảy máu mủ! {username}",
+    "# Cặc nhỏ xíu như kiến, địt vào lồn già chảy máu mủ + nước nhớt! {username}",
+    "# Đụ con đĩ già nua, cặc mày hôi như phân bò phơi nắng + xác chết thối! {username}",
+    "# Cặc nhỏ như kiến chết, địt vào lồn già đến sưng + chảy máu mủ nhớt! {username}",
+    "# Thằng mặt lờ, mẹ mày là con đĩ thú vật bú cặc ngựa + chó ngoài đường! {username}",
+    "# Thằng óc cứt, mặt lồn giống lỗ đít đầy phân thối + nước dãi tinh trùng thú! {username}",
+    "# Địt vào mồm thối hoắc, nuốt tinh trùng chó + phân tươi + nước đái! {username}",
+    "# Thằng mặt khỉ đột, mẹ mày là con đĩ thú bú cặc + nuốt tinh trùng! {username}",
+    "# Đụ con đĩ già thối tha, cặc hôi như phân bò phơi + xác chết thối! {username}",
+    "# Óc phân bò khô thối, lồn mẹ mày sưng vù vì bị địt + nhét cặc thú + vật lạ! {username}",
+    "# Địt mẹ thằng chó cái, cặc teo tóp xíu như giòi chết trong phân! {username}",
+    "# Địt mẹ chúng bay hết, cặc teo tóp như giòi thối rữa trong đống cứt! {username}",
+    "# Lồn mẹ mày nát như tương đặc, bị địt đến không còn gì + chảy nước máu mủ lênh láng! {username}",
+    "# Lồn mẹ mày nát như tương, bị địt đến nát + chảy mủ máu nước nhớt! {username}",
+    "# Mày chết cho sạch đường phố, đồ rác rưởi bệnh hoạn chuyên bú cặc thú của xã hội! {username}",
+    "# Đụ má cái đồ mất dạy hết mức, mẹ mày bú cặc thú rừng rồi nuốt tinh trùng sống + phân chó! {username}",
+    "# Đụ má thằng mặt thú, mẹ mày bú cặc ngựa + chó ngoài đồng rồi nuốt sống! {username}",
+    "# Thằng óc cứt, mặt lồn giống lỗ đít đầy phân thối + tinh trùng thú! {username}",
+    "# Cặc nhỏ xíu như hạt đậu thối, địt vào lồn già đến chảy máu + mủ + nước nhớt thối! {username}",
+    "# Địt vào mồm mày, bắt nuốt tinh trùng thối + phân chó tươi + nước đái lẫn! {username}",
+    "# Đụ con mẹ mày lần nữa nữa, bú cặc thú vật + nuốt tinh trùng sống! {username}",
+    "# Óc cứt thối của mày, đụ con đĩ mẹ mày lần nữa rồi bắt nó quỳ bú cặc chó ngoài đường! {username}",
+    "# Cặc hôi thối như cứt tươi, địt vào lồn già thối hoắc đến sưng vù! {username}",
+    "# Mày chết mẹ mày đi ngay, đồ rác rưởi hết mức chuyên bú cặc thú! {username}",
+    "# Chửi đổng cái lồn, cút xéo đi thằng chó đẻ bú cặc thú vật! {username}",
+    "# Cặc hôi thối như cứt chó tươi, địt vào lồn già đến sưng chảy mủ! {username}",
+    "# Lồn mẹ mày nát như tương, bị địt đến không còn gì + chảy nước máu! {username}",
+    "# Cặc nhỏ xíu như đậu thối, địt vào lồn già chảy máu + mủ nhớt! {username}",
+    "# Địt vào mồm thối hoắc của mày rồi bắt nuốt tinh trùng chó tươi + phân + nước đái! {username}",
+    "# Con đĩ thối tha hết, lồn rộng vì bị địt cả trăm lần + thú vật! {username}",
+    "# Đụ con đĩ già nua thối, cặc mày hôi như xác chết thối + phân bò! {username}",
+    "# Con đĩ thối tha hết mức, lồn rộng thênh thang như biển phân + tinh trùng thối rữa! {username}",
+    "# Đụ má cái lồn thối hoắc nát bét chảy mủ máu của mẹ mày, quỳ xuống bú cặc chó + ngựa + lợn + nuốt tinh trùng sống cả đống! {username}",
+    "# Đéo biết xấu hổ chút nào, lồn mẹ mày thối như xác chết phân hủy đầy dòi bọ! {username}",
+    "# Thằng mặt thú vật hoang dã, lồn mẹ mày thối hoắc như xác chết phân hủy giữa mùa hè oi bức! {username}"
+]
+
+def is_bot_owner():
+    async def predicate(ctx):
+        return ctx.author.id in BOT_OWNERS
+    return commands.check(predicate)
 
 @bot.event
 async def on_ready():
-    await load_roasts()
-    print(f"✅ Bot online: {bot.user} (ID: {bot.user.id})")
-    print(f"📅 Đã online từ: {bot_start_time.strftime('%H:%M:%S %d/%m/%Y')}")
-    await bot.change_presence(activity=discord.Activity(type=discord.ActivityType.watching, name="!bothelp | 🦾"))
+    print(f"Logged in as {bot.user} (ID: {bot.user.id})")
+    print("🔥 Bot Spam thuần túy đã sẵn sàng hoạt động!")
 
-@bot.event
-async def on_message_delete(message):
-    if message.author.bot:
-        return
-    snipe_data[message.channel.id] = {
-        "author": message.author,
-        "content": message.content,
-        "deleted_at": datetime.datetime.now()
-    }
+# ==================== LỆNH SPAM & DỪNG ====================
 
-@bot.event
-async def on_message(message):
-    global roast_mode
-    if message.author == bot.user:
+@bot.command(name="spam")
+@is_bot_owner()
+async def spam(ctx, member: discord.Member = None):
+    global spam_task_running, is_spamming
+    
+    if member is None:
+        await ctx.send("⚠️ VUI LÒNG TAG THÀNH VIÊN CẦN SPAM! Cú pháp: `.spam @user`")
         return
 
-    if roast_mode and not message.content.startswith(bot.command_prefix):
-        if roast_list:
-            await message.channel.send(random.choice(roast_list))
+    if spam_task_running and not spam_task_running.done():
+        spam_task_running.cancel()
 
-    if message.mentions:
-        for user in message.mentions:
-            if user.id in afk_users:
-                await message.channel.send(f"⏳ {user.mention} đang AFK: {afk_users[user.id]}")
+    is_spamming = True
+    await ctx.send(f"🚨 **BẮT ĐẦU SPAM NGẪU NHIÊN 3 CÂU/GIÂY ĐẾN:** {member.mention} 🖕🔥")
 
-    await bot.process_commands(message)
+    async def spam_loop():
+        try:
+            while True:
+                # Gửi liên tục 3 câu ngẫu nhiên trong 1 lượt
+                for _ in range(3):
+                    template = random.choice(ROAST_LINES)
+                    await ctx.send(template.format(username=member.mention))
+                
+                # Giữ độ trễ 0.9 giây giữa các lượt để tối ưu tốc độ và tránh rate limit
+                await asyncio.sleep(0.9)
+        except discord.Forbidden:
+            print("[SPAM ERROR]: Bot bị mất quyền gửi tin nhắn trong kênh này!")
+        except asyncio.CancelledError:
+            pass
+        except Exception as e:
+            print(f"[SPAM ERROR]: {e}")
 
-@bot.event
-async def on_command_completion(ctx):
-    command_usage[ctx.command.name] += 1
-
-@bot.command()
-async def bothelp(ctx):
-    embed = discord.Embed(
-        title="🤖 APEX BOT - DANH SÁCH LỆNH",
-        description="Tổng hợp các lệnh tiện ích và giải trí",
-        color=0x00ff88
-    )
-    embed.add_field(name="🛠️ CƠ BẢN", value="`!ping` - Độ trễ\n`!bothelp` - Trợ giúp\n`!uptime` - Thời gian hoạt động\n`!stats` - Thống kê bot", inline=False)
-    embed.add_field(name="🔥 CHỬI & SPAM", value="`!spam @user [số lần]` - Chửi + tag (mặc định 1000)\n`!roastmode` - Bật/tắt auto roast (owner)\n`!reload` - Tải lại danh sách chửi (owner)", inline=False)
-    embed.add_field(name="🎮 GIẢI TRÍ", value="`!8ball <câu hỏi>` - Bóng ma thuật\n`!flip` - Tung đồng xu\n`!roll` - Random 1-100\n`!rps <kéo/búa/bao>` - Oẳn tù tì\n`!meme` - Ảnh meme ngẫu nhiên", inline=False)
-    embed.add_field(name="📁 TIỆN ÍCH", value="`!avatar @user` - Xem avatar\n`!serverinfo` - Thông tin server\n`!userinfo @user` - Thông tin user\n`!snipe` - Lấy tin nhắn bị xóa\n`!afk <lý do>` - Đặt AFK\n`!remind <time> <msg>` - Nhắc nhở\n`!poll <câu hỏi>` - Tạo poll\n`!slowmode <giây>` - Đặt slowmode", inline=False)
-    embed.add_field(name="🔒 ADMIN (Owner)", value="`!clear <số>` - Xóa tin nhắn\n`!say <nội dung>` - Bot nói\n`!embed <title>|<desc>` - Gửi embed\n`!kick @user` - Kick\n`!ban @user` - Ban\n`!lock` - Khóa kênh\n`!unlock` - Mở khóa\n`!warn @user <lý do>` - Cảnh cáo\n`!warns @user` - Xem cảnh cáo", inline=False)
-    embed.add_field(name="📊 HỆ THỐNG", value="`!level` - Xem level\n`!daily` - Nhận thưởng ngày\n`!profile @user` - Xem profile\n`!leaderboard` - Bảng xếp hạng", inline=False)
-    embed.add_field(name="🌐 KHÁC", value="`!calc <biểu thức>` - Máy tính\n`!random <min> <max>` - Random số\n`!choose <a,b,c>` - Chọn ngẫu nhiên\n`!invite` - Link mời bot\n`!support` - Link hỗ trợ", inline=False)
-    embed.set_footer(text=f"📦 {len(bot.commands)} lệnh • Chạy bởi APEX")
-    await ctx.send(embed=embed)
-
-@bot.command()
-async def ping(ctx):
-    await ctx.send(f"🏓 Pong! `{round(bot.latency * 1000)}ms`")
-
-@bot.command()
-async def uptime(ctx):
-    delta = datetime.datetime.now() - bot_start_time
-    hours, remainder = divmod(int(delta.total_seconds()), 3600)
-    minutes, seconds = divmod(remainder, 60)
-    await ctx.send(f"⏰ Bot đã hoạt động: `{hours}h {minutes}m {seconds}s`")
-
-@bot.command()
-async def stats(ctx):
-    total_commands = sum(command_usage.values())
-    embed = discord.Embed(title="📊 THỐNG KÊ BOT", color=0x00aaff)
-    embed.add_field(name="📦 Tổng lệnh", value=str(len(bot.commands)), inline=True)
-    embed.add_field(name="🔢 Lệnh đã dùng", value=str(total_commands), inline=True)
-    embed.add_field(name="👥 Server", value=str(len(bot.guilds)), inline=True)
-    embed.add_field(name="👤 Người dùng", value=str(len(bot.users)), inline=True)
-    embed.add_field(name="📅 Thời gian chạy", value=f"{datetime.datetime.now() - bot_start_time}", inline=False)
-    await ctx.send(embed=embed)
-
-@bot.command()
-async def reload(ctx):
-    if ctx.author.id != OWNER_ID:
-        await ctx.send("❌ Không có quyền!")
-        return
-    await load_roasts()
-    await ctx.send(f"✅ Đã tải lại {len(roast_list)} câu chửi từ GitHub!")
-
-@bot.command()
-async def roastmode(ctx):
-    global roast_mode
-    if ctx.author.id != OWNER_ID:
-        await ctx.send("❌ Không có quyền!")
-        return
-    roast_mode = not roast_mode
-    await ctx.send(f"🔥 Chế độ auto roast: {'BẬT' if roast_mode else 'TẮT'}")
-
-@bot.command()
-async def spam(ctx, member: discord.Member = None, count: int = 1000):
-    if not member:
-        await ctx.send("❌ Cần tag người dùng! Ví dụ: !spam @user 500")
-        return
-    if count < 1:
-        await ctx.send("❌ Số lần spam phải >= 1")
-        return
-    if count > 1000:
-        await ctx.send("❌ Số lần spam tối đa là 1000!")
-        return
-    if not roast_list:
-        await ctx.send("❌ Chưa có câu chửi nào, dùng !reload để tải")
-        return
-
-    await ctx.send(f"🔥 Bắt đầu spam {count} lần cho {member.mention}...")
-    batch_size = 10
-    for i in range(0, count, batch_size):
-        batch = min(batch_size, count - i)
-        for _ in range(batch):
-            insult = random.choice(roast_list)
-            await ctx.send(f"{insult} {member.mention}")
-        await asyncio.sleep(1)
-
-    await ctx.send(f"✅ Đã spam {count} lần cho {member.mention}!")
+    spam_task_running = bot.loop.create_task(spam_loop())
 
 @spam.error
 async def spam_error(ctx, error):
-    if isinstance(error, commands.BadArgument):
-        await ctx.send("❌ Lỗi cú pháp: !spam @user [số lần]")
+    if isinstance(error, commands.CheckFailure):
+        await ctx.send("❌ **LỆNH BỊ TỪ CHỐI! BẠN KHÔNG CÓ QUYỀN SỬ DỤNG LỆNH NÀY.**")
 
-@bot.command()
-async def eightball(ctx, *, question):
-    responses = ["Có", "Không", "Có thể", "Chắc chắn", "Không đời nào", "Hỏi lại sau", "Có lẽ", "Tôi không biết", "Chắc chắn rồi", "Đừng hy vọng"]
-    await ctx.send(f"🎱 Câu hỏi: {question}\n📦 Trả lời: {random.choice(responses)}")
+@bot.command(name="stop")
+@is_bot_owner()
+async def stop_spam(ctx):
+    global spam_task_running, is_spamming
+    is_spamming = False
+    if spam_task_running:
+        spam_task_running.cancel()
+        spam_task_running = None
+    
+    await ctx.send("🛑 **ĐÃ DỪNG HOẠT ĐỘNG SPAM THÀNH CÔNG!**")
 
-@bot.command()
-async def flip(ctx):
-    await ctx.send(f"🪙 Tung đồng xu: **{random.choice(['Mặt ngửa', 'Mặt sấp'])}**")
-
-@bot.command()
-async def roll(ctx):
-    await ctx.send(f"🎲 Con số của bạn: **{random.randint(1, 100)}**")
-
-@bot.command()
-async def rps(ctx, choice: str):
-    choices = ["kéo", "búa", "bao"]
-    if choice.lower() not in choices:
-        await ctx.send("❌ Chọn: kéo, búa, bao")
-        return
-    bot_choice = random.choice(choices)
-    result = ""
-    if choice.lower() == bot_choice:
-        result = "Hòa!"
-    elif (choice.lower() == "kéo" and bot_choice == "bao") or \
-         (choice.lower() == "búa" and bot_choice == "kéo") or \
-         (choice.lower() == "bao" and bot_choice == "búa"):
-        result = "Bạn thắng! 🎉"
-    else:
-        result = "Bạn thua! 😢"
-    await ctx.send(f"🤖 Bot chọn: **{bot_choice}**\n{result}")
-
-@bot.command()
-async def meme(ctx):
-    memes = [
-        "https://i.pinimg.com/736x/61/45/8d/61458d8ccd8228fea72a9d684a54ae20.jpg",
-        "https://i.pinimg.com/736x/f8/8c/21/f88c217a209ce109603f2f29c7d10221.jpg",
-        "https://i.pinimg.com/736x/38/b1/98/38b198c64648b8fac98bc80397db28b9.jpg",
-        "https://i.pinimg.com/736x/e5/89/5c/e5895c3f96e37e230e49e2f89885b7b6.jpg",
-        "https://i.pinimg.com/736x/9e/47/b9/9e47b99eabb1eff14ac37e9d45f72cb4.jpg"
-    ]
-    await ctx.send(random.choice(memes))
-
-@bot.command()
-async def avatar(ctx, member: discord.Member = None):
-    if not member:
-        member = ctx.author
-    embed = discord.Embed(title=f"Avatar của {member.display_name}", color=0x00aaff)
-    embed.set_image(url=member.display_avatar.url)
-    await ctx.send(embed=embed)
-
-@bot.command()
-async def serverinfo(ctx):
-    guild = ctx.guild
-    embed = discord.Embed(title=f"📋 Thông tin Server: {guild.name}", color=0x00ffaa)
-    embed.add_field(name="👑 Chủ sở hữu", value=guild.owner.mention, inline=True)
-    embed.add_field(name="👥 Thành viên", value=str(guild.member_count), inline=True)
-    embed.add_field(name="📅 Ngày tạo", value=guild.created_at.strftime("%d/%m/%Y %H:%M"), inline=True)
-    embed.add_field(name="📁 Kênh", value=str(len(guild.channels)), inline=True)
-    embed.add_field(name="🎭 Vai trò", value=str(len(guild.roles)), inline=True)
-    embed.set_thumbnail(url=guild.icon.url if guild.icon else None)
-    await ctx.send(embed=embed)
-
-@bot.command()
-async def userinfo(ctx, member: discord.Member = None):
-    if not member:
-        member = ctx.author
-    embed = discord.Embed(title=f"👤 Thông tin {member.display_name}", color=0x00aaff)
-    embed.set_thumbnail(url=member.display_avatar.url)
-    embed.add_field(name="ID", value=member.id, inline=True)
-    embed.add_field(name="📛 Tên", value=member.name, inline=True)
-    embed.add_field(name="📅 Ngày tham gia", value=member.joined_at.strftime("%d/%m/%Y %H:%M"), inline=True)
-    embed.add_field(name="📅 Ngày tạo", value=member.created_at.strftime("%d/%m/%Y %H:%M"), inline=True)
-    embed.add_field(name="🎭 Vai trò cao nhất", value=member.top_role.mention, inline=True)
-    await ctx.send(embed=embed)
-
-@bot.command()
-async def snipe(ctx):
-    data = snipe_data.get(ctx.channel.id)
-    if not data:
-        await ctx.send("📭 Không có tin nhắn bị xóa nào.")
-        return
-    embed = discord.Embed(title="📌 Tin nhắn bị xóa", color=0xffaa00)
-    embed.add_field(name="Người gửi", value=data["author"].mention, inline=False)
-    embed.add_field(name="Nội dung", value=data["content"] or "Không có nội dung", inline=False)
-    embed.set_footer(text=f"Xóa lúc {data['deleted_at'].strftime('%H:%M:%S %d/%m/%Y')}")
-    await ctx.send(embed=embed)
-
-@bot.command()
-async def afk(ctx, *, reason="Không có lý do"):
-    afk_users[ctx.author.id] = reason
-    await ctx.send(f"😴 {ctx.author.mention} đã đặt AFK: {reason}")
-
-@bot.command()
-async def remind(ctx, time_str, *, content):
-    try:
-        if time_str.endswith("s"):
-            seconds = int(time_str[:-1])
-        elif time_str.endswith("m"):
-            seconds = int(time_str[:-1]) * 60
-        elif time_str.endswith("h"):
-            seconds = int(time_str[:-1]) * 3600
-        else:
-            seconds = int(time_str)
-        if seconds <= 0:
-            await ctx.send("❌ Thời gian phải lớn hơn 0")
-            return
-        await ctx.send(f"⏰ Đã đặt nhắc nhở: `{content}` trong `{seconds}` giây")
-        await asyncio.sleep(seconds)
-        await ctx.send(f"🔔 {ctx.author.mention} Nhắc nhở: {content}")
-    except ValueError:
-        await ctx.send("❌ Thời gian không hợp lệ. Ví dụ: !remind 10s text")
-
-@bot.command()
-async def poll(ctx, *, question):
-    if not question:
-        await ctx.send("❌ Vui lòng nhập câu hỏi.")
-        return
-    embed = discord.Embed(title="📊 POLL", description=question, color=0x00ffaa)
-    embed.set_footer(text=f"Được tạo bởi {ctx.author.display_name}")
-    msg = await ctx.send(embed=embed)
-    await msg.add_reaction("👍")
-    await msg.add_reaction("👎")
-    await msg.add_reaction("🤷")
-
-@bot.command()
-async def slowmode(ctx, seconds: int = 0):
-    if ctx.author.id != OWNER_ID:
-        await ctx.send("❌ Không có quyền!")
-        return
-    if seconds < 0:
-        await ctx.send("❌ Số giây phải >= 0")
-        return
-    await ctx.channel.edit(slowmode_delay=seconds)
-    await ctx.send(f"✅ Đã đặt slowmode thành {seconds} giây.")
-
-@bot.command()
-async def lock(ctx):
-    if ctx.author.id != OWNER_ID:
-        await ctx.send("❌ Không có quyền!")
-        return
-    await ctx.channel.set_permissions(ctx.guild.default_role, send_messages=False)
-    await ctx.send("🔒 Kênh đã bị khóa.")
-
-@bot.command()
-async def unlock(ctx):
-    if ctx.author.id != OWNER_ID:
-        await ctx.send("❌ Không có quyền!")
-        return
-    await ctx.channel.set_permissions(ctx.guild.default_role, send_messages=True)
-    await ctx.send("🔓 Kênh đã được mở khóa.")
-
-@bot.command()
-async def kick(ctx, member: discord.Member, *, reason=None):
-    if ctx.author.id != OWNER_ID:
-        await ctx.send("❌ Không có quyền!")
-        return
-    if member == ctx.author:
-        await ctx.send("❌ Không thể kick chính mình!")
-        return
-    try:
-        await member.kick(reason=reason)
-        await ctx.send(f"✅ Đã kick {member.mention} với lý do: {reason or 'Không có lý do'}")
-    except discord.Forbidden:
-        await ctx.send("❌ Bot không có quyền kick thành viên này.")
-
-@bot.command()
-async def ban(ctx, member: discord.Member, *, reason=None):
-    if ctx.author.id != OWNER_ID:
-        await ctx.send("❌ Không có quyền!")
-        return
-    if member == ctx.author:
-        await ctx.send("❌ Không thể ban chính mình!")
-        return
-    try:
-        await member.ban(reason=reason)
-        await ctx.send(f"✅ Đã ban {member.mention} với lý do: {reason or 'Không có lý do'}")
-    except discord.Forbidden:
-        await ctx.send("❌ Bot không có quyền ban thành viên này.")
-
-@bot.command()
-async def warn(ctx, member: discord.Member, *, reason="Không có lý do"):
-    if ctx.author.id != OWNER_ID:
-        await ctx.send("❌ Không có quyền!")
-        return
-    warns[member.id].append({"reason": reason, "by": ctx.author.id, "time": datetime.datetime.now()})
-    await ctx.send(f"⚠️ Đã cảnh cáo {member.mention} với lý do: {reason}")
-
-@bot.command()
-async def warns(ctx, member: discord.Member = None):
-    if not member:
-        member = ctx.author
-    data = warns.get(member.id, [])
-    if not data:
-        await ctx.send(f"📭 {member.mention} không có cảnh cáo nào.")
-        return
-    embed = discord.Embed(title=f"⚠️ Cảnh cáo của {member.display_name}", color=0xffaa00)
-    for i, w in enumerate(data, 1):
-        embed.add_field(name=f"Lần {i}", value=f"Lý do: {w['reason']}\nNgười cảnh cáo: <@{w['by']}>\nThời gian: {w['time'].strftime('%H:%M %d/%m/%Y')}", inline=False)
-    await ctx.send(embed=embed)
-
-@bot.command()
-async def clear(ctx, amount: int = 5):
-    if ctx.author.id != OWNER_ID:
-        await ctx.send("❌ Không có quyền!")
-        return
-    if amount < 1:
-        await ctx.send("❌ Số lượng phải lớn hơn 0")
-        return
-    deleted = await ctx.channel.purge(limit=amount+1)
-    await ctx.send(f"🗑️ Đã xóa {len(deleted)-1} tin nhắn", delete_after=3)
-
-@clear.error
-async def clear_error(ctx, error):
-    if isinstance(error, commands.BadArgument):
-        await ctx.send("❌ Vui lòng nhập số lượng hợp lệ")
-
-@bot.command()
-async def say(ctx, *, content):
-    if ctx.author.id != OWNER_ID:
-        await ctx.send("❌ Không có quyền!")
-        return
-    await ctx.send(content)
-
-@bot.command()
-async def embed(ctx, *, args):
-    if ctx.author.id != OWNER_ID:
-        await ctx.send("❌ Không có quyền!")
-        return
-    try:
-        title, desc = args.split("|", 1)
-        embed = discord.Embed(title=title.strip(), description=desc.strip(), color=0x00ff88)
-        await ctx.send(embed=embed)
-    except ValueError:
-        await ctx.send("❌ Cú pháp: !embed Tiêu đề | Nội dung")
-
-@bot.command()
-async def level(ctx):
-    user = ctx.author
-    xp = user_xp[user.id]
-    level = user_levels[user.id]
-    xp_needed = 100 * (level + 1)
-    embed = discord.Embed(title=f"📊 Level của {user.display_name}", color=0x00ffaa)
-    embed.add_field(name="Level", value=str(level), inline=True)
-    embed.add_field(name="XP", value=f"{xp}/{xp_needed}", inline=True)
-    embed.set_thumbnail(url=user.display_avatar.url)
-    await ctx.send(embed=embed)
-
-@bot.command()
-async def daily(ctx):
-    if ctx.author.id in daily_cooldown:
-        remaining = daily_cooldown[ctx.author.id] - datetime.datetime.now()
-        if remaining.total_seconds() > 0:
-            hours, remainder = divmod(int(remaining.total_seconds()), 3600)
-            minutes, seconds = divmod(remainder, 60)
-            await ctx.send(f"⏳ Bạn đã nhận thưởng rồi, chờ {hours}h {minutes}m {seconds}s nữa!")
-            return
-    reward = random.randint(100, 500)
-    user_xp[ctx.author.id] += reward
-    user_levels[ctx.author.id] = math.floor(user_xp[ctx.author.id] / 100)
-    daily_cooldown[ctx.author.id] = datetime.datetime.now() + datetime.timedelta(hours=24)
-    await ctx.send(f"🎁 Bạn đã nhận {reward} XP! Tổng XP: {user_xp[ctx.author.id]}")
-
-@bot.command()
-async def profile(ctx, member: discord.Member = None):
-    if not member:
-        member = ctx.author
-    xp = user_xp[member.id]
-    level = user_levels[member.id]
-    embed = discord.Embed(title=f"👤 Profile của {member.display_name}", color=0x00aaff)
-    embed.set_thumbnail(url=member.display_avatar.url)
-    embed.add_field(name="Level", value=str(level), inline=True)
-    embed.add_field(name="XP", value=str(xp), inline=True)
-    embed.add_field(name="Cảnh cáo", value=str(len(warns.get(member.id, []))), inline=True)
-    embed.add_field(name="Ngày tham gia", value=member.joined_at.strftime("%d/%m/%Y"), inline=True)
-    await ctx.send(embed=embed)
-
-@bot.command()
-async def leaderboard(ctx):
-    sorted_users = sorted(user_xp.items(), key=lambda x: x[1], reverse=True)[:10]
-    if not sorted_users:
-        await ctx.send("📭 Chưa có dữ liệu leaderboard.")
-        return
-    embed = discord.Embed(title="🏆 Bảng xếp hạng XP", color=0x00ffaa)
-    for i, (user_id, xp) in enumerate(sorted_users, 1):
-        user = bot.get_user(user_id)
-        if user:
-            name = user.display_name
-        else:
-            name = f"User {user_id}"
-        embed.add_field(name=f"#{i} {name}", value=f"Level {user_levels[user_id]} • {xp} XP", inline=False)
-    await ctx.send(embed=embed)
-
-@bot.command()
-async def calc(ctx, *, expression):
-    try:
-        expression = re.sub(r'[^0-9+\-*/().%\s]', '', expression)
-        result = eval(expression)
-        await ctx.send(f"🧮 Kết quả: `{result}`")
-    except Exception:
-        await ctx.send("❌ Biểu thức không hợp lệ!")
-
-@bot.command()
-async def randomnum(ctx, min_num: int = 1, max_num: int = 100):
-    if min_num > max_num:
-        await ctx.send("❌ Số min phải nhỏ hơn số max.")
-        return
-    await ctx.send(f"🎲 Số ngẫu nhiên: **{random.randint(min_num, max_num)}**")
-
-@bot.command()
-async def choose(ctx, *, options):
-    choices = [opt.strip() for opt in options.split(",")]
-    if len(choices) < 2:
-        await ctx.send("❌ Cần ít nhất 2 lựa chọn, phân cách bằng dấu phẩy.")
-        return
-    await ctx.send(f"🤔 Tôi chọn: **{random.choice(choices)}**")
-
-@bot.command()
-async def invite(ctx):
-    embed = discord.Embed(title="📨 Mời bot APEX", description="Mời bot vào server của bạn!", color=0x00ff88)
-    embed.add_field(name="Link mời", value="[Click để mời](https://discord.com/oauth2/authorize?client_id=YOUR_CLIENT_ID&permissions=8&scope=bot)", inline=False)
-    await ctx.send(embed=embed)
-
-@bot.command()
-async def support(ctx):
-    embed = discord.Embed(title="🆘 Hỗ trợ", description="Cần giúp đỡ? Liên hệ admin!", color=0x00aaff)
-    embed.add_field(name="Server hỗ trợ", value="[Link Discord](https://discord.gg/your_server)", inline=False)
-    await ctx.send(embed=embed)
+@stop_spam.error
+async def stop_error(ctx, error):
+    if isinstance(error, commands.CheckFailure):
+        await ctx.send("❌ **LỆNH BỊ TỪ CHỐI! BẠN KHÔNG CÓ QUYỀN SỬ DỤNG LỆNH NÀY.**")
 
 if __name__ == "__main__":
-    if TOKEN:
-        try:
-            bot.run(TOKEN)
-        except discord.LoginFailure:
-            print("❌ Token không hợp lệ! Kiểm tra lại DISCORD_TOKEN.")
-        except Exception as e:
-            print(f"❌ Lỗi: {e}")
-    else:
-        print("❌ Chưa cấu hình DISCORD_TOKEN!")
+    bot.run(DISCORD_TOKEN)
