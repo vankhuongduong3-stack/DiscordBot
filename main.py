@@ -160,7 +160,7 @@ def is_bot_owner():
 @bot.event
 async def on_ready():
     print(f"Logged in as {bot.user} (ID: {bot.user.id})")
-    print("🔥 Bot Spam tốc độ cao 5 tin/giây đã sẵn sàng!")
+    print("🔥 Bot Spam siêu tốc 5 tin/0.5 giây đã sẵn sàng!")
 
 # ==================== LỆNH SPAM & DỪNG ====================
 
@@ -177,12 +177,11 @@ async def spam(ctx, member: discord.Member = None, *, custom_text: str = None):
         spam_task_running.cancel()
 
     is_spamming = True
-    await ctx.send(f"🚨 **ĐÃ KÍCH HOẠT TỐC ĐỘ SIÊU THANH 5 TIN/GIÂY ĐẾN:** {member.mention} 🖕🔥")
+    await ctx.send(f"🚨 **ĐÃ KÍCH HOẠT TỐC ĐỘ 5 TIN/0.5 GIÂY ĐẾN:** {member.mention} 🖕🔥")
 
     async def spam_loop():
         try:
             while True:
-                # Gửi 5 tin nhắn liên tiếp trong một chu kỳ
                 tasks = []
                 for _ in range(5):
                     if custom_text:
@@ -191,11 +190,11 @@ async def spam(ctx, member: discord.Member = None, *, custom_text: str = None):
                         template = random.choice(ROAST_LINES)
                         tasks.append(ctx.send(template.format(username=member.mention)))
                 
-                # Thực thi gửi đồng thời 5 tin nhắn trong 1 giây để đạt hiệu suất 5 msg/s
+                # Gửi đồng thời 5 tin nhắn cùng lúc
                 await asyncio.gather(*tasks)
                 
-                # Độ trễ 1 giây cho chu kỳ tiếp theo (hoặc tinh chỉnh nếu cần)
-                await asyncio.sleep(1.0)
+                # Giảm thời gian chờ xuống 0.5 giây cho mỗi chu kỳ gửi 5 tin
+                await asyncio.sleep(0.5)
                 
         except discord.Forbidden:
             print("[SPAM ERROR]: Bot bị mất quyền gửi tin nhắn trong kênh này!")
