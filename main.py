@@ -20,7 +20,7 @@ bot = commands.Bot(command_prefix=".", intents=intents, help_command=None)
 is_spamming = False
 spam_task_running = None
 
-# ==================== KHO SPAM ĐẦY ĐỦ (209 CÂU) ====================
+# ==================== KHO SPAM ĐẦY ĐỦ (209 CÂU GIỮ NGUYÊN DẤU #) ====================
 ROAST_LINES = [
     "# Lồn mẹ mày nát bét như tương, bị địt đến không còn + chảy lênh! {username}",
     "# Đéo biết xấu hổ, lồn mẹ mày thối như cứt + xác chết đầy dòi bọ! {username}",
@@ -160,7 +160,7 @@ def is_bot_owner():
 @bot.event
 async def on_ready():
     print(f"Logged in as {bot.user} (ID: {bot.user.id})")
-    print("🔥 Bot Spam siêu tốc 5 tin/0.5 giây đã sẵn sàng!")
+    print("🔥 Bot Spam 209 câu (giữ nguyên dấu #) với tốc độ 600ms đã sẵn sàng!")
 
 # ==================== LỆNH SPAM & DỪNG ====================
 
@@ -177,24 +177,20 @@ async def spam(ctx, member: discord.Member = None, *, custom_text: str = None):
         spam_task_running.cancel()
 
     is_spamming = True
-    await ctx.send(f"🚨 **ĐÃ KÍCH HOẠT TỐC ĐỘ 5 TIN/0.5 GIÂY ĐẾN:** {member.mention} 🖕🔥")
+    await ctx.send(f"🚨 **ĐÃ KÍCH HOẠT SPAM 209 CÂU (TỐC ĐỘ 600MS) ĐẾN:** {member.mention} 🖕🔥")
 
     async def spam_loop():
         try:
             while True:
-                tasks = []
-                for _ in range(5):
-                    if custom_text:
-                        tasks.append(ctx.send(f"{member.mention} {custom_text}"))
-                    else:
-                        template = random.choice(ROAST_LINES)
-                        tasks.append(ctx.send(template.format(username=member.mention)))
+                if custom_text:
+                    msg = f"{member.mention} {custom_text}"
+                else:
+                    template = random.choice(ROAST_LINES)
+                    msg = template.format(username=member.mention)
                 
-                # Gửi đồng thời 5 tin nhắn cùng lúc
-                await asyncio.gather(*tasks)
-                
-                # Giảm thời gian chờ xuống 0.5 giây cho mỗi chu kỳ gửi 5 tin
-                await asyncio.sleep(0.5)
+                await ctx.send(msg)
+                # Chờ chính xác 600ms (0.6 giây) cho mỗi tin nhắn
+                await asyncio.sleep(0.6)
                 
         except discord.Forbidden:
             print("[SPAM ERROR]: Bot bị mất quyền gửi tin nhắn trong kênh này!")
