@@ -221,7 +221,7 @@ async def stop_spam(ctx):
 @stop_spam.error
 async def stop_error(ctx, error):
     if isinstance(error, commands.CheckFailure):
-        await ctx.send("❌ **LỆNH BỊ TỪ CHỐI! BẠN KHÔNG CÓ QUYỀN SỬ DỤNG LỆNH NÀY.**")
+        await ctx.send("❌ **MÀY NGHĨ MÀY LÀ CÁI CẶC GÌ MÀ ĐÒI SÀI BOT?.**")
 
 if __name__ == "__main__":
     bot.run(DISCORD_TOKEN)
