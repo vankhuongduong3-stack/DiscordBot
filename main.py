@@ -8,7 +8,7 @@ from discord.ext import commands
 DISCORD_TOKEN = os.getenv("TOKEN")
 
 # Chỉ định duy nhất ID Owner của bạn có quyền thực thi lệnh
-BOT_OWNERS = [1535132569534865490
+BOT_OWNERS = [1535132569534865490,
              1454570566517260422]
 
 intents = discord.Intents.default()
