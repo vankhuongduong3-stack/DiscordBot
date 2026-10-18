@@ -5682,22 +5682,31 @@ async def on_ready():
         asyncio.create_task(sync_commands())
 
 # ==================== CHẠY BOT ====================
+# ==================== CHẠY BOT ====================
 if __name__ == "__main__":
     import threading
-    threading.Thread(target=keep_alive, daemon=True).start()
+    import time
+    import traceback # Thêm thư viện này để in lỗi chi tiết
+
+    try:
+        print("🌐 Đang khởi động Web Server (keep_alive)...", flush=True)
+        threading.Thread(target=keep_alive, daemon=True).start()
+    except Exception as e:
+        print(f"❌ Lỗi khởi động keep_alive: {e}", flush=True)
 
     if DISCORD_TOKEN:
         try:
-            print("ĐANG KHỞI ĐỘNG BOT...", flush=True) # Thêm flush=True
+            print("⏳ Đang kết nối tới Discord...", flush=True)
             bot.launch_time = datetime.now()
             bot.run(DISCORD_TOKEN)
         except discord.LoginFailure:
-            print("❌ Lỗi: Token không hợp lệ!", flush=True)
+            print("❌ Lỗi: Token không hợp lệ! Hãy kiểm tra lại trên Developer Portal.", flush=True)
+        except discord.PrivilegedIntentsRequired:
+            print("❌ Lỗi: Chưa bật Privileged Intents (Message Content, Server Members, Presence)!", flush=True)
         except Exception as e:
             print(f"❌ Lỗi khi chạy bot: {e}", flush=True)
+            traceback.print_exc() # In toàn bộ chi tiết lỗi ra log
     else:
-        print("❌ Lỗi: Chưa cấu hình TOKEN trong Environment Variables!", flush=True)
-        # Giữ cho ứng dụng không bị tắt để bạn đọc được log
-        import time
+        print("❌ Lỗi: Chưa cấu hình biến TOKEN trong Environment Variables của Render!", flush=True)
         while True:
             time.sleep(60)
