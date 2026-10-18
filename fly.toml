@@ -1,0 +1,18 @@
+app = "ten-bot-cua-ban" # Đặt tên duy nhất cho ứng dụng
+primary_region = "sin" # Vùng Singapore, gần Việt Nam
+
+[build]
+
+[env]
+  PORT = "8080"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = "off" # QUAN TRỌNG: Tắt tính năng tự động ngủ
+  auto_start_machines = true
+  min_machines_running = 1 # Luôn giữ ít nhất 1 máy chạy
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "256mb"
