@@ -5682,16 +5682,21 @@ async def on_ready():
 
 # ==================== CHẠY BOT ====================
 if __name__ == "__main__":
-    # Chạy keep_alive trong một luồng riêng (background) để không chặn bot
+    import threading
     threading.Thread(target=keep_alive, daemon=True).start()
 
     if DISCORD_TOKEN:
         try:
+            print("ĐANG KHỞI ĐỘNG BOT...", flush=True) # Thêm flush=True
             bot.launch_time = datetime.now()
             bot.run(DISCORD_TOKEN)
         except discord.LoginFailure:
-            print("❌ Lỗi: Token không hợp lệ! Vui lòng kiểm tra lại.")
+            print("❌ Lỗi: Token không hợp lệ!", flush=True)
         except Exception as e:
-            print(f"❌ Lỗi khi chạy bot: {e}")
+            print(f"❌ Lỗi khi chạy bot: {e}", flush=True)
     else:
-        print("❌ Lỗi: Chưa cấu hình TOKEN trong Environment Variables!")
+        print("❌ Lỗi: Chưa cấu hình TOKEN trong Environment Variables!", flush=True)
+        # Giữ cho ứng dụng không bị tắt để bạn đọc được log
+        import time
+        while True:
+            time.sleep(60)
