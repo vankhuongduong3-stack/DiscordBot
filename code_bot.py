@@ -5635,17 +5635,56 @@ async def set_ping(ctx, mode: str, member: discord.Member, *, content: str):
     save_all_data()
 
     await ctx.send(f"✅ Đã set ping cho {member.mention} với chế độ `{mode}`.\n📝 Nội dung: {content}")
-# ==================== CHẠY BOT ====================
-if __name__ == "__main__":
-    keep_alive()
-    if DISCORD_TOKEN:
+
+async def change_presence_loop():
+    activities = [
+        discord.Game(name="n!help | Boss Bảo 👑"),
+        discord.Activity(type=discord.ActivityType.watching, name="các bạn chơi game"),
+        discord.Activity(type=discord.ActivityType.listening, name="lệnh n!help"),
+    ]
+    index = 0
+    while True:
         try:
-            bot.launch_time = datetime.now()
-            bot.run(DISCORD_TOKEN)
-        except discord.LoginFailure:
-            print("❌ Lỗi: Token không hợp lệ! Vui lòng kiểm tra lại.")
+            await bot.change_presence(activity=activities[index % len(activities)])
+            index += 1
+            await asyncio.sleep(300)  # Đợi 5 phút rồi đổi trạng thái
+        except discord.HTTPException as e:
+            if e.status == 429:
+                retry_after = int(e.response.headers.get("Retry-After", "5"))
+                print(f"⏳ Rate limited khi đổi trạng thái! Đợi {retry_after + 1}s...")
+                await asyncio.sleep(retry_after + 1)
+            else:
+                print(f"❌ Lỗi HTTP khi đổi trạng thái: {e}")
+                await asyncio.sleep(60)
         except Exception as e:
-            print(f"❌ Lỗi khi chạy bot: {e}")
-    else:
-        print("❌ Lỗi: Chưa cấu hình TOKEN trong Environment Variables!")
-        print("💡 Hãy đặt biến môi trường TOKEN hoặc chỉnh sửa trực tiếp trong code.")
+            print(f"❌ Lỗi không xác định khi đổi trạng thái: {e}")
+            await asyncio.sleep(60)
+
+@bot.event
+async def on_ready():
+# ==================== CHẠY BOT ====================
+import asyncio
+
+@bot.event
+async def on_ready():
+    print(f"Logged in as {bot.user} (ID: {bot.user.id})")
+    print("✨ Bot đã khởi động thành công và sẵn sàng hoạt động!")
+    # ... (giữ nguyên phần print khác)
+
+    # Đặt trạng thái ban đầu (chỉ một lần)
+    await bot.change_presence(activity=discord.Game(name="n!help | Boss Bảo 👑"))
+
+    # Đồng bộ lệnh trong nền, không chặn bot
+    if not hasattr(bot, 'synced_commands'):
+        bot.synced_commands = False
+    
+    if not bot.synced_commands:
+        async def sync_commands():
+            try:
+                synced = await bot.tree.sync()
+                print(f"✅ Đã đồng bộ {len(synced)} lệnh slash.")
+                bot.synced_commands = True
+            except Exception as e:
+                print(f"❌ Lỗi khi đồng bộ lệnh: {e}")
+        
+        asyncio.create_task(sync_commands())
