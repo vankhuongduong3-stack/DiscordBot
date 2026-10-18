@@ -10,6 +10,7 @@ import json
 import math
 import re
 import time
+import threading
 from typing import Optional, Union
 from dotenv import load_dotenv  # Đã import đầy đủ để tránh lỗi NameError
 
@@ -5681,7 +5682,9 @@ async def on_ready():
 
 # ==================== CHẠY BOT ====================
 if __name__ == "__main__":
-    keep_alive()
+    # Chạy keep_alive trong một luồng riêng (background) để không chặn bot
+    threading.Thread(target=keep_alive, daemon=True).start()
+
     if DISCORD_TOKEN:
         try:
             bot.launch_time = datetime.now()
