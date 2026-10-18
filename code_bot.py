@@ -5636,6 +5636,7 @@ async def set_ping(ctx, mode: str, member: discord.Member, *, content: str):
 
     await ctx.send(f"✅ Đã set ping cho {member.mention} với chế độ `{mode}`.\n📝 Nội dung: {content}")
 
+# ==================== PRESENCE LOOP & ON_READY ====================
 async def change_presence_loop():
     activities = [
         discord.Game(name="n!help | Boss Bảo 👑"),
@@ -5660,9 +5661,6 @@ async def change_presence_loop():
             print(f"❌ Lỗi không xác định khi đổi trạng thái: {e}")
             await asyncio.sleep(60)
 
-@bot.event
-async def on_ready():
-# ==================== CHẠY BOT ====================
 @bot.event
 async def on_ready():
     print(f"Logged in as {bot.user} (ID: {bot.user.id})")
@@ -5691,3 +5689,17 @@ async def on_ready():
             except Exception as e:
                 print(f"❌ Lỗi khi đồng bộ lệnh: {e}")
         asyncio.create_task(sync_commands())
+
+# ==================== CHẠY BOT ====================
+if __name__ == "__main__":
+    keep_alive()
+    if DISCORD_TOKEN:
+        try:
+            bot.launch_time = datetime.now()
+            bot.run(DISCORD_TOKEN)
+        except discord.LoginFailure:
+            print("❌ Lỗi: Token không hợp lệ! Vui lòng kiểm tra lại.")
+        except Exception as e:
+            print(f"❌ Lỗi khi chạy bot: {e}")
+    else:
+        print("❌ Lỗi: Chưa cấu hình TOKEN trong Environment Variables!")
