@@ -4874,15 +4874,6 @@ async def addgamecoins(ctx, member: discord.Member, amount: int):
 
 # ==================== SỰ KIỆN ====================
 @bot.event
-async def on_ready():
-    print(f"Logged in as {bot.user} (ID: {bot.user.id})")
-    print("✨ Bot đã khởi động thành công và sẵn sàng hoạt động!")
-    print(f"🌐 Đang tham gia {len(bot.guilds)} server(s)")
-    for guild in bot.guilds:
-        print(f"  - {guild.name} (ID: {guild.id})")
-    print("=" * 50)
-    await bot.change_presence(activity=discord.Game(name="n!help | Boss Bảo 👑"))
-@bot.event
 async def on_message(message):
     # ==============================================
     # 1. BỎ QUA TIN NHẮN CỦA BOT
