@@ -5689,7 +5689,7 @@ if __name__ == "__main__":
         try:
             print("ĐANG KHỞI ĐỘNG BOT...", flush=True) # Thêm flush=True
             bot.launch_time = datetime.now()
-            bot.run(TOKEN)
+            bot.run(DISCORD_TOKEN)
         except discord.LoginFailure:
             print("❌ Lỗi: Token không hợp lệ!", flush=True)
         except Exception as e:
