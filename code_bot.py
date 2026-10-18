@@ -5682,7 +5682,6 @@ async def on_ready():
         asyncio.create_task(sync_commands())
 
 # ==================== CHẠY BOT ====================
-# ==================== CHẠY BOT ====================
 if __name__ == "__main__":
     import threading
     import time
