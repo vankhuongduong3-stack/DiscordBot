@@ -1,3 +1,4 @@
+print("🚀 FILE CODE_BOT.PY ĐÃ BẮT ĐẦU CHẠY!", flush=True)
 import asyncio
 import os
 import sys
