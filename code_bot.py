@@ -5663,22 +5663,26 @@ async def change_presence_loop():
 @bot.event
 async def on_ready():
 # ==================== CHẠY BOT ====================
-import asyncio
-
 @bot.event
 async def on_ready():
     print(f"Logged in as {bot.user} (ID: {bot.user.id})")
     print("✨ Bot đã khởi động thành công và sẵn sàng hoạt động!")
-    # ... (giữ nguyên phần print khác)
+    print(f"🌐 Đang tham gia {len(bot.guilds)} server(s)")
+    for guild in bot.guilds:
+        print(f"  - {guild.name} (ID: {guild.id})")
+    print("=" * 50)
 
-    # Đặt trạng thái ban đầu (chỉ một lần)
+    # Đặt trạng thái ban đầu
     await bot.change_presence(activity=discord.Game(name="n!help | Boss Bảo 👑"))
 
-    # Đồng bộ lệnh trong nền, không chặn bot
-    if not hasattr(bot, 'synced_commands'):
-        bot.synced_commands = False
-    
-    if not bot.synced_commands:
+    # ✅ CHỈ khởi chạy vòng lặp presence MỘT LẦN duy nhất
+    if not hasattr(bot, '_presence_task_started'):
+        bot._presence_task_started = True
+        asyncio.create_task(change_presence_loop())
+        print("✅ Đã khởi chạy tác vụ cập nhật trạng thái tự động (mỗi 5 phút).")
+
+    # ✅ Đồng bộ lệnh Slash trong nền (nếu có dùng)
+    if not getattr(bot, 'synced_commands', False):
         async def sync_commands():
             try:
                 synced = await bot.tree.sync()
@@ -5686,5 +5690,4 @@ async def on_ready():
                 bot.synced_commands = True
             except Exception as e:
                 print(f"❌ Lỗi khi đồng bộ lệnh: {e}")
-        
         asyncio.create_task(sync_commands())
