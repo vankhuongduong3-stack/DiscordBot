@@ -9,7 +9,7 @@ def home():
     return "Bot is alive and running!"
 
 def run():
-    # Render sẽ cấp một cổng (PORT) tự động, nếu chạy local sẽ dùng cổng 8080
+    # Render sẽ cấp biến môi trường PORT, nếu chạy local sẽ dùng 8080
     port = int(os.environ.get("PORT", 8080))
     app.run(host='0.0.0.0', port=port)
 
