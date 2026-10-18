@@ -5639,28 +5639,26 @@ async def change_presence_loop():
         try:
             await bot.change_presence(activity=activities[index % len(activities)])
             index += 1
-            await asyncio.sleep(300)  # Đợi 5 phút rồi đổi trạng thái
+            await asyncio.sleep(300)  # Đợi 5 phút (300 giây)
         except discord.HTTPException as e:
             if e.status == 429:
                 retry_after = int(e.response.headers.get("Retry-After", "5"))
-                print(f"⏳ Rate limited khi đổi trạng thái! Đợi {retry_after + 1}s...")
+                print(f"Rate limited! Đợi {retry_after + 1}s...")
                 await asyncio.sleep(retry_after + 1)
             else:
-                print(f"❌ Lỗi HTTP khi đổi trạng thái: {e}")
+                print(f"Lỗi HTTP khi đổi trạng thái: {e}")
                 await asyncio.sleep(60)
         except Exception as e:
-            print(f"❌ Lỗi không xác định khi đổi trạng thái: {e}")
+            print(f"Lỗi không xác định: {e}")
             await asyncio.sleep(60)
+
+import asyncio
 
 @bot.event
 async def on_ready():
     print(f"Logged in as {bot.user} (ID: {bot.user.id})")
-    print("✨ Bot đã khởi động thành công và sẵn sàng hoạt động!")
-    print(f"🌐 Đang tham gia {len(bot.guilds)} server(s)")
-    for guild in bot.guilds:
-        print(f"  - {guild.name} (ID: {guild.id})")
-    print("=" * 50)
-
+    print("✨ Bot đã khởi động thành công!")
+    
     # Đặt trạng thái ban đầu
     await bot.change_presence(activity=discord.Game(name="n!help | Boss Bảo 👑"))
 
