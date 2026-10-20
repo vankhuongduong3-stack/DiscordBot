@@ -53,6 +53,7 @@ bot.remove_command('help')
 # ==================== BIẾN TOÀN CỤC ====================
 spam_task_running = None
 is_spamming = False
+is_roasting = False  # <--- THÊM DÒNG NÀY VÀO
 bot_enabled = True
 
 SERVER_LOG_CHANNELS = {}
@@ -717,16 +718,22 @@ async def start_spam_error(ctx, error):
 @bot.command(name="stopspam")
 @is_authorized()
 async def stop_spam(ctx):
-    global is_spamming, spam_task_running
-    if not is_spamming:
-        await ctx.send("❌ Hệ thống spam đang không chạy!")
+    global is_spamming, is_roasting, spam_task_running
+    
+    if not is_spamming and not is_roasting:
+        await ctx.send("❌ Hiện tại không có tiến trình spam nào đang chạy!")
         return
 
+    # Tắt tất cả các cờ hiệu
     is_spamming = False
+    is_roasting = False
+    
+    # Hủy tác vụ spam kênh (nếu có)
     if spam_task_running:
         spam_task_running.cancel()
         spam_task_running = None
-    await ctx.send("🛑 **ĐÃ DỪNG SPAM TẤT CẢ KÊNH!**")
+        
+    await ctx.send("🛑 **ĐÃ DỪNG TẤT CẢ CÁC HOẠT ĐỘNG SPAM!**")
 
 @stop_spam.error
 async def stop_spam_error(ctx, error):
@@ -735,18 +742,45 @@ async def stop_spam_error(ctx, error):
 
 @bot.command(name="spamroast")
 @is_authorized()
-async def spam_roast(ctx, member: discord.Member, count: int = 10):
-    if count > 50:
-        count = 50
-    await ctx.send(f"🚀 **Bắt đầu spam chửi {member.mention} ({count} lần)...**")
-    for i in range(count):
-        roast_template = random.choice(ROAST_LINES)
-        msg = roast_template.format(username=member.mention)
-        try:
-            await ctx.send(msg)
-        except:
-            pass
-        await asyncio.sleep(0.8)
+async def spam_roast(ctx, member: discord.Member, count: int = 0):
+    global is_roasting
+    if is_roasting or is_spamming:
+        await ctx.send("❌ Một tiến trình spam khác đang chạy rồi! Hãy dùng `n!stopspam` trước.")
+        return
+
+    is_roasting = True
+    
+    if count <= 0:
+        await ctx.send(f"🚀 **Bắt đầu spam chửi {member.mention} VÔ HẠN...** (Gõ `n!stopspam` để dừng)")
+        while is_roasting:
+            roast_template = random.choice(ROAST_LINES)
+            msg = roast_template.format(username=member.mention)
+            try:
+                await ctx.send(msg)
+            except discord.errors.HTTPException as e:
+                if e.status == 429:
+                    await asyncio.sleep(5)
+            except:
+                pass
+            await asyncio.sleep(0.8)
+    else:
+        await ctx.send(f"🚀 **Bắt đầu spam chửi {member.mention} ({count} lần)...**")
+        for _ in range(count):
+            if not is_roasting: # Cho phép dừng ngang chừng nếu dùng stopspam
+                break
+            roast_template = random.choice(ROAST_LINES)
+            msg = roast_template.format(username=member.mention)
+            try:
+                await ctx.send(msg)
+            except discord.errors.HTTPException as e:
+                if e.status == 429:
+                    await asyncio.sleep(5)
+            except:
+                pass
+            await asyncio.sleep(0.8)
+            
+    is_roasting = False
+    await ctx.send("✅ Đã kết thúc tiến trình spam chửi.")
 
 @spam_roast.error
 async def spam_roast_error(ctx, error):
