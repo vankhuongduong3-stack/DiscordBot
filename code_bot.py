@@ -3202,7 +3202,7 @@ class HelpSelect(discord.ui.Select):
     async def callback(self, interaction: discord.Interaction):
         selected = self.values[0]
         
-        # Xử lý khi bấm Trang Chủ
+        # 1. Xử lý khi bấm Trang Chủ
         if selected == "Home":
             embed = discord.Embed(
                 title="✨ BẢNG ĐIỀU KHIỂN QUẢN TRỊ TỐI CAO ✨",
@@ -3220,7 +3220,7 @@ class HelpSelect(discord.ui.Select):
             await interaction.response.edit_message(embed=embed, view=self.view)
             return
 
-        # Xử lý khi chọn danh mục
+        # 2. Xử lý khi chọn danh mục
         data = HELP_CATEGORIES.get(selected, {})
         cmds = data.get("commands", {})
         desc = data.get("description", "")
@@ -3239,14 +3239,15 @@ class HelpSelect(discord.ui.Select):
             # SỬA LỖI 1: Xóa chữ "n!" thay vì split (giữ lại được cả các lệnh viết liền như n!welcome)
             cmd_list = []
             for cmd, detail in cmds.items():
+                # Thay thế n! hoặc N! ở đầu và xóa khoảng trắng thừa
                 cmd_display = cmd.replace("n!", "").replace("N!", "").strip()
                 cmd_list.append(f"• **`{cmd_display}`** – {detail}")
 
-            # SỬA LỖI 2: Chia nhỏ thành các field để không vượt quá giới hạn 4096 ký tự
+            # SỬA LỖI 2: Chia nhỏ thành các field để không vượt quá giới hạn 4096 ký tự của Discord
             current_field = ""
             field_index = 1
             for line in cmd_list:
-                # Nếu thêm dòng này mà vượt quá 1024 ký tự của 1 field
+                # Nếu thêm dòng này mà vượt quá 1024 ký tự của 1 field (giới hạn của Discord)
                 if len(current_field) + len(line) + 1 > 1024:
                     embed.add_field(name=f"📜 Danh sách lệnh (Phần {field_index})", value=current_field, inline=False)
                     current_field = line + "\n"
@@ -3259,6 +3260,13 @@ class HelpSelect(discord.ui.Select):
                 embed.add_field(name=f"📜 Danh sách lệnh (Phần {field_index})", value=current_field, inline=False)
 
         await interaction.response.edit_message(embed=embed, view=self.view)
+
+
+class HelpView(discord.ui.View):
+    def __init__(self, user_id, owner_ids):
+        super().__init__(timeout=180)
+        self.add_item(HelpSelect(user_id, owner_ids))
+        
 @bot.command(name="help")
 async def help_command(ctx):
     embed = discord.Embed(
@@ -5621,8 +5629,8 @@ async def set_ping(ctx, mode: str, member: discord.Member, *, content: str):
 async def change_presence_loop():
     activities = [
         discord.Game(name="n!help | Boss Bảo 👑"),
-        discord.Activity(type=discord.ActivityType.watching, name="các bạn chơi game"),
-        discord.Activity(type=discord.ActivityType.listening, name="lệnh n!help"),
+        discord.Activity(type=discord.ActivityType.watching, name="ez nuke and management on top"),
+        discord.Activity(type=discord.ActivityType.listening, name=" n!help"),
     ]
     index = 0
     while True:
