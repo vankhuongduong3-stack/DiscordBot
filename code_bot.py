@@ -3201,6 +3201,8 @@ class HelpSelect(discord.ui.Select):
 
     async def callback(self, interaction: discord.Interaction):
         selected = self.values[0]
+        
+        # Xử lý khi bấm Trang Chủ
         if selected == "Home":
             embed = discord.Embed(
                 title="✨ BẢNG ĐIỀU KHIỂN QUẢN TRỊ TỐI CAO ✨",
@@ -3216,32 +3218,47 @@ class HelpSelect(discord.ui.Select):
             embed.set_thumbnail(url=HELP_THUMBNAIL_GIF)
             embed.set_footer(text="Hệ thống quản trị đỉnh cao • Boss Bảo On Top", icon_url=interaction.client.user.display_avatar.url)
             await interaction.response.edit_message(embed=embed, view=self.view)
+            return
+
+        # Xử lý khi chọn danh mục
+        data = HELP_CATEGORIES.get(selected, {})
+        cmds = data.get("commands", {})
+        desc = data.get("description", "")
+        
+        embed = discord.Embed(
+            title=f"{selected}",
+            description=f"💡 **Mô tả:** {desc}\n\n" if desc else "",
+            color=0x00FFCC
+        )
+        embed.set_thumbnail(url=HELP_THUMBNAIL_GIF)
+        embed.set_footer(text="Hệ thống quản trị đỉnh cao • Boss Bảo On Top", icon_url=interaction.client.user.display_avatar.url)
+
+        if not cmds:
+            embed.description += "Chưa có lệnh nào trong mục này."
         else:
-            data = HELP_CATEGORIES.get(selected, {})
-            cmds = data.get("commands", {})
-            desc = data.get("description", "")
-            cmd_text = ""
+            # SỬA LỖI 1: Xóa chữ "n!" thay vì split (giữ lại được cả các lệnh viết liền như n!welcome)
+            cmd_list = []
             for cmd, detail in cmds.items():
-                parts = cmd.split(" ", 1)
-                if len(parts) == 2:
-                    cmd_display = parts[1]
+                cmd_display = cmd.replace("n!", "").replace("N!", "").strip()
+                cmd_list.append(f"• **`{cmd_display}`** – {detail}")
+
+            # SỬA LỖI 2: Chia nhỏ thành các field để không vượt quá giới hạn 4096 ký tự
+            current_field = ""
+            field_index = 1
+            for line in cmd_list:
+                # Nếu thêm dòng này mà vượt quá 1024 ký tự của 1 field
+                if len(current_field) + len(line) + 1 > 1024:
+                    embed.add_field(name=f"📜 Danh sách lệnh (Phần {field_index})", value=current_field, inline=False)
+                    current_field = line + "\n"
+                    field_index += 1
                 else:
-                    cmd_display = cmd
-                cmd_text += f"• **`{cmd_display}`** – {detail}\n"
-            embed = discord.Embed(
-                title=f"{selected}",
-                description=f"💡 **Mô tả:** {desc}\n\n{cmd_text}" if cmd_text else "Chưa có lệnh nào trong mục này.",
-                color=0x00FFCC
-            )
-            embed.set_thumbnail(url=HELP_THUMBNAIL_GIF)
-            embed.set_footer(text="Hệ thống quản trị đỉnh cao • Boss Bảo On Top", icon_url=interaction.client.user.display_avatar.url)
-            await interaction.response.edit_message(embed=embed, view=self.view)
+                    current_field += line + "\n"
+            
+            # Thêm field cuối cùng
+            if current_field:
+                embed.add_field(name=f"📜 Danh sách lệnh (Phần {field_index})", value=current_field, inline=False)
 
-class HelpView(discord.ui.View):
-    def __init__(self, user_id, owner_ids):
-        super().__init__(timeout=180)
-        self.add_item(HelpSelect(user_id, owner_ids))
-
+        await interaction.response.edit_message(embed=embed, view=self.view)
 @bot.command(name="help")
 async def help_command(ctx):
     embed = discord.Embed(
