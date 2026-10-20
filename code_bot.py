@@ -380,6 +380,47 @@ def is_authorized():
         return False
     return commands.check(predicate)
 
+# ==================== VIEW XÁC NHẬN QUA DM ====================
+class ConfirmActionView(discord.ui.View):
+    def __init__(self, ctx, action_callback, action_name):
+        super().__init__(timeout=60)
+        self.ctx = ctx
+        self.action_callback = action_callback
+        self.action_name = action_name
+
+    async def interaction_check(self, interaction: discord.Interaction) -> bool:
+        # Chỉ người gọi lệnh mới được bấm nút
+        if interaction.user.id != self.ctx.author.id:
+            await interaction.response.send_message("❌ Bạn không phải là người yêu cầu lệnh này!", ephemeral=True)
+            return False
+        return True
+
+    async def on_timeout(self):
+        for child in self.children:
+            child.disabled = True
+        try:
+            # Cố gắng sửa tin nhắn cũ thành hết hạn (nếu có thể)
+            await self.message.edit(content="⏳ Đã hết thời gian xác nhận (60s).", view=self)
+        except:
+            pass
+
+    @discord.ui.button(label="🟢 ĐỒNG Ý THỰC HIỆN", style=discord.ButtonStyle.green)
+    async def confirm(self, interaction: discord.Interaction, button: discord.ui.Button):
+        for child in self.children:
+            child.disabled = True
+        await interaction.response.edit_message(content=f"⏳ Đang thực thi lệnh `{self.action_name}`...", view=self)
+        self.stop()
+        
+        # Gọi hàm thực thi lệnh
+        await self.action_callback()
+        await interaction.followup.send(f"✅ Đã thực thi xong lệnh `{self.action_name}`.")
+
+    @discord.ui.button(label="🔴 TỪ CHỐI (HỦY)", style=discord.ButtonStyle.red)
+    async def cancel(self, interaction: discord.Interaction, button: discord.ui.Button):
+        for child in self.children:
+            child.disabled = True
+        await interaction.response.edit_message(content=f"❌ Bạn đã từ chối thực hiện lệnh `{self.action_name}`.", view=self)
+        self.stop()
 # ==================== VIEW NUKE ====================
 class NukeConfirmView(discord.ui.View):
     def __init__(self, guild: discord.Guild, channel: discord.abc.Messageable):
@@ -1075,54 +1116,27 @@ async def warn_error(ctx, error):
 @bot.command(name="kickall")
 @is_authorized()
 async def kick_all_members(ctx):
-    try:
-        confirm_embed = discord.Embed(
-            title="⚠️ 🌈 **XÁC NHẬN KICK TẤT CẢ THÀNH VIÊN** 🌈 ⚠️",
-            description=(
-                f"🔥 **Boss Bảo kính yêu!**\n\n"
-                f"Lệnh này sẽ kick toàn bộ thành viên trừ Boss và bot.\n\n"
-                f"🔹 **Gõ n! confirmkickall để xác nhận**\n"
-                f"🔹 **Gõ bất kỳ tin nhắn nào khác để hủy bỏ**"
-            ),
-            color=0xFF0000
-        )
-        await ctx.send(embed=confirm_embed)
-        def check(m):
-            return m.author == ctx.author and m.channel == ctx.channel
-        try:
-            msg = await bot.wait_for('message', timeout=30.0, check=check)
-            if msg.content.lower() != "n! confirmkickall":
-                await ctx.send("❌ Hủy bỏ.")
-                return
-        except asyncio.TimeoutError:
-            await ctx.send("⏳ Hết thời gian.")
-            return
-        embed = discord.Embed(
-            title="🚀 🌈 **ĐANG KICK THÀNH VIÊN...** 🌈",
-            description="🔥 **Đang thực hiện...** 🔥",
-            color=0xFF0000
-        )
-        await ctx.send(embed=embed)
+    confirm_embed = discord.Embed(
+        title="⚠️ XÁC NHẬN KICK TOÀN BỘ THÀNH VIÊN",
+        description="Lệnh này sẽ **KICK TOÀN BỘ** thành viên (trừ Bot, Admin và Chủ Server).\nBạn có chắc chắn không?",
+        color=0xFF0000
+    )
+    confirm_embed.set_footer(text="Lệnh này không thể hoàn tác!")
+
+    async def execute_action():
         members = [m for m in ctx.guild.members if not m.bot and m.id not in BOT_OWNERS and m.id != ctx.guild.owner_id]
         for i in range(0, len(members), 10):
             batch = members[i:i+10]
-            tasks = [m.kick(reason="Server nuke theo lệnh Boss Bảo") for m in batch]
+            tasks = [m.kick(reason="Lệnh từ Admin") for m in batch]
             await asyncio.gather(*tasks, return_exceptions=True)
             await asyncio.sleep(1)
-        complete_embed = discord.Embed(
-            title="✅ 🌈 **KICK HOÀN TẤT** 🌈",
-            description="🎉 **Đã thực thi xong!**",
-            color=0x00FF00
-        )
-        await ctx.send(embed=complete_embed)
-    except Exception as e:
-        await ctx.send(f"❌ Lỗi: {str(e)}")
 
-@kick_all_members.error
-async def kick_all_members_error(ctx, error):
-    if isinstance(error, commands.CheckFailure):
-        await ctx.send(' ❌ BẠN KHÔNG CÓ ĐỦ QUYỀN ĐỂ SỬ DỤNG LỆNH NGUY HIỂM NÀY! 🚫')
-
+    view = ConfirmActionView(ctx, execute_action, "kickall")
+    try:
+        await ctx.author.send(embed=confirm_embed, view=view)
+        await ctx.send("📩 **Đã gửi tin nhắn xác nhận qua DM. Vui lòng kiểm tra tin nhắn riêng!**")
+    except discord.Forbidden:
+        await ctx.send("❌ Không thể gửi DM. Hãy mở quyền nhắn tin riêng cho bot nhé!")
 @bot.command(name="masskick")
 @is_authorized()
 async def masskick(ctx, *members: discord.Member):
@@ -1336,44 +1350,29 @@ async def remove_role_from_user_error(ctx, error):
 
 @bot.command(name="purge")
 @is_authorized()
-async def purge_all(ctx, confirm: str = None):
-    if confirm is None or confirm.lower() != "all":
-        await ctx.send("⚠️ **CẢNH BÁO!** Lệnh này sẽ xóa TOÀN BỘ tin nhắn trong server!\n🔹 Gõ `n! purge all` để xác nhận.")
-        return
-
-    embed = discord.Embed(
-        title="🧹 ĐANG XÓA TOÀN BỘ TIN NHẮN...",
-        description="⏳ Đang xử lý, vui lòng đợi...",
-        color=0xFF9900
+async def purge_all(ctx):
+    confirm_embed = discord.Embed(
+        title="⚠️ XÁC NHẬN XÓA TOÀN BỘ TIN NHẮN",
+        description="Lệnh này sẽ **XÓA TOÀN BỘ TIN NHẮN** của tất cả các kênh trong server.\nBạn có chắc chắn không?",
+        color=0xFF0000
     )
-    embed.set_thumbnail(url=HELP_THUMBNAIL_GIF)
-    await ctx.send(embed=embed)
-
-    try:
-        total_deleted = 0
+    
+    async def execute_action():
         for channel in ctx.guild.channels:
             if isinstance(channel, discord.TextChannel):
                 try:
-                    deleted = await channel.purge(limit=1000)
-                    total_deleted += len(deleted)
+                    await channel.purge(limit=1000)
                     await asyncio.sleep(1)
                 except:
                     pass
-        embed = discord.Embed(
-            title="✅ ĐÃ XÓA TOÀN BỘ TIN NHẮN",
-            description=f"🧹 Đã xóa tổng cộng **{total_deleted}** tin nhắn trong server!\n👑 **Người thực hiện:** {ctx.author.mention}",
-            color=0x00FF00
-        )
-        embed.set_thumbnail(url=HELP_THUMBNAIL_GIF)
-        await ctx.send(embed=embed)
-    except Exception as e:
-        await ctx.send(f"❌ Lỗi: {str(e)}")
 
-@purge_all.error
-async def purge_all_error(ctx, error):
-    if isinstance(error, commands.CheckFailure):
-        await ctx.send(' ❌ BẠN KHÔNG CÓ ĐỦ QUYỀN ĐỂ SỬ DỤNG LỆNH NGUY HIỂM NÀY! 🚫')
-
+    view = ConfirmActionView(ctx, execute_action, "purge all")
+    try:
+        await ctx.author.send(embed=confirm_embed, view=view)
+        await ctx.send("📩 **Đã gửi tin nhắn xác nhận qua DM. Vui lòng kiểm tra tin nhắn riêng!**")
+    except discord.Forbidden:
+        await ctx.send("❌ Không thể gửi DM. Hãy mở quyền nhắn tin riêng cho bot nhé!")
+        
 @bot.command(name="clear")
 @is_authorized()
 async def clear(ctx, amount: int = 10):
@@ -1567,58 +1566,27 @@ async def clone_channel_error(ctx, error):
 @bot.command(name="deleteallchannels")
 @is_authorized()
 async def delete_all_channels(ctx):
-    try:
-        confirm_embed = discord.Embed(
-            title="⚠️ 🌈 **XÁC NHẬN XÓA TẤT CẢ KÊNH** 🌈 ⚠️",
-            description=(
-                f"🔥 **Boss Bảo kính yêu!**\n\n"
-                f"Lệnh này sẽ xóa **TOÀN BỘ** kênh trong server\n\n"
-                f"🔹 **Gõ n! confirmdelete để xác nhận**\n"
-                f"🔹 **Gõ bất kỳ tin nhắn nào khác để hủy bỏ**"
-            ),
-            color=0xFF0000
-        )
-        await ctx.send(embed=confirm_embed)
-        def check(m):
-            return m.author == ctx.author and m.channel == ctx.channel
-        try:
-            msg = await bot.wait_for('message', timeout=30.0, check=check)
-            if msg.content.lower() != "n! confirmdelete":
-                await ctx.send("❌ Lệnh xóa kênh đã bị hủy bỏ.")
-                return
-        except asyncio.TimeoutError:
-            await ctx.send("⏳ Hết thời gian chờ.")
-            return
-        embed = discord.Embed(
-            title="🚀 🌈 **ĐANG XÓA TẤT CẢ KÊNH...** 🌈",
-            description="🔥 **Đang thực hiện...** 🔥",
-            color=0xFF0000
-        )
-        await ctx.send(embed=embed)
+    confirm_embed = discord.Embed(
+        title="⚠️ XÁC NHẬN XÓA TOÀN BỘ KÊNH",
+        description="Lệnh này sẽ **XÓA TOÀN BỘ KÊNH** trong server này.\nBạn có chắc chắn không?",
+        color=0xFF0000
+    )
+    confirm_embed.set_footer(text="Lệnh này không thể hoàn tác!")
+
+    async def execute_action():
         channels = list(ctx.guild.channels)
         for i in range(0, len(channels), 15):
             batch = channels[i:i+15]
             tasks = [ch.delete() for ch in batch]
             await asyncio.gather(*tasks, return_exceptions=True)
             await asyncio.sleep(0.5)
-        complete_embed = discord.Embed(
-            title="✅ 🌈 **XÓA KÊNH HOÀN TẤT** 🌈",
-            description="🎉 **Đã xóa thành công tất cả kênh!**",
-            color=0x00FF00
-        )
-        await send_log(ctx.guild.id, complete_embed)
-        try:
-            await ctx.author.send(embed=complete_embed)
-        except:
-            pass
-    except Exception as e:
-        await ctx.send(f"❌ Lỗi: {str(e)}")
 
-@delete_all_channels.error
-async def delete_all_channels_error(ctx, error):
-    if isinstance(error, commands.CheckFailure):
-        await ctx.send(' ❌ BẠN KHÔNG CÓ ĐỦ QUYỀN ĐỂ SỬ DỤNG LỆNH NGUY HIỂM NÀY! 🚫')
-
+    view = ConfirmActionView(ctx, execute_action, "deleteallchannels")
+    try:
+        await ctx.author.send(embed=confirm_embed, view=view)
+        await ctx.send("📩 **Đã gửi tin nhắn xác nhận qua DM. Vui lòng kiểm tra tin nhắn riêng!**")
+    except discord.Forbidden:
+        await ctx.send("❌ Không thể gửi DM. Hãy mở quyền nhắn tin riêng cho bot nhé!")
 @bot.command(name="spamchannels")
 @is_authorized()
 async def spam_channels(ctx, amount: int = 100):
@@ -1689,54 +1657,28 @@ async def spam_roles_error(ctx, error):
 @bot.command(name="deleteallroles")
 @is_authorized()
 async def delete_all_roles(ctx):
-    try:
-        confirm_embed = discord.Embed(
-            title="⚠️ 🌈 **XÁC NHẬN XÓA TẤT CẢ ROLE** 🌈 ⚠️",
-            description=(
-                f"🔥 **Boss Bảo kính yêu!**\n\n"
-                f"Lệnh này sẽ xóa **TOÀN BỘ** role\n\n"
-                f"🔹 **Gõ n! confirmdeleteroles để xác nhận**\n"
-                f"🔹 **Gõ bất kỳ tin nhắn nào khác để hủy bỏ**"
-            ),
-            color=0xFF0000
-        )
-        await ctx.send(embed=confirm_embed)
-        def check(m):
-            return m.author == ctx.author and m.channel == ctx.channel
-        try:
-            msg = await bot.wait_for('message', timeout=30.0, check=check)
-            if msg.content.lower() != "n! confirmdeleteroles":
-                await ctx.send("❌ Hủy bỏ.")
-                return
-        except asyncio.TimeoutError:
-            await ctx.send("⏳ Hết thời gian.")
-            return
-        embed = discord.Embed(
-            title="🚀 🌈 **ĐANG XÓA TẤT CẢ ROLE...** 🌈",
-            description="🔥 **Đang xử lý...** 🔥",
-            color=0xFF0000
-        )
-        await ctx.send(embed=embed)
+    confirm_embed = discord.Embed(
+        title="⚠️ XÁC NHẬN XÓA TOÀN BỘ ROLE",
+        description="Lệnh này sẽ **XÓA TOÀN BỘ ROLE** trong server (trừ @everyone).\nBạn có chắc chắn không?",
+        color=0xFF0000
+    )
+    confirm_embed.set_footer(text="Lệnh này không thể hoàn tác!")
+
+    async def execute_action():
         roles = [r for r in ctx.guild.roles if r.name != "@everyone"]
         for i in range(0, len(roles), 10):
             batch = roles[i:i+10]
             tasks = [r.delete() for r in batch]
             await asyncio.gather(*tasks, return_exceptions=True)
             await asyncio.sleep(0.5)
-        complete_embed = discord.Embed(
-            title="✅ 🌈 **XÓA ROLE HOÀN TẤT** 🌈",
-            description="🎉 **Đã xóa xong!**",
-            color=0x00FF00
-        )
-        await ctx.send(embed=complete_embed)
-    except Exception as e:
-        await ctx.send(f"❌ Lỗi: {str(e)}")
 
-@delete_all_roles.error
-async def delete_all_roles_error(ctx, error):
-    if isinstance(error, commands.CheckFailure):
-        await ctx.send(' ❌ BẠN KHÔNG CÓ ĐỦ QUYỀN ĐỂ SỬ DỤNG LỆNH NGUY HIỂM NÀY! 🚫')
-
+    view = ConfirmActionView(ctx, execute_action, "deleteallroles")
+    try:
+        await ctx.author.send(embed=confirm_embed, view=view)
+        await ctx.send("📩 **Đã gửi tin nhắn xác nhận qua DM. Vui lòng kiểm tra tin nhắn riêng!**")
+    except discord.Forbidden:
+        await ctx.send("❌ Không thể gửi DM. Hãy mở quyền nhắn tin riêng cho bot nhé!")
+        
 @bot.command(name="slowmode")
 @is_authorized()
 async def set_slowmode(ctx, seconds: int = 0):
@@ -2562,36 +2504,57 @@ async def backup_server_error(ctx, error):
 @bot.command(name="restore")
 @is_authorized()
 async def restore_server(ctx, file_name: str = None):
+    if file_name is None:
+        file_name = f"backup_{ctx.guild.id}.json"
+    if not os.path.exists(file_name):
+        await ctx.send(f"❌ Không tìm thấy file backup `{file_name}`. Hãy chạy `n! backup` trước.")
+        return
+    with open(file_name, "r", encoding="utf-8") as f:
+        backup_data = json.load(f)
+        
+    confirm_embed = discord.Embed(
+        title="⚠️ XÁC NHẬN RESTORE SERVER",
+        description=(
+            f"Bạn sắp khôi phục server từ file `{file_name}`.\n"
+            f"**Hành động này sẽ xóa TOÀN BỘ kênh và role hiện tại** (trừ @everyone).\n"
+            f"Số kênh sẽ tạo: `{len(backup_data.get('channels', []))}`\n"
+            f"Số role sẽ tạo: `{len(backup_data.get('roles', []))}`"
+        ),
+        color=0xFF0000
+    )
+
+    async def execute_action():
+        # Copy logic khôi phục của bạn vào đây
+        for channel in ctx.guild.channels:
+            try: await channel.delete()
+            except: pass
+        for role in ctx.guild.roles:
+            if role.name != "@everyone":
+                try: await role.delete()
+                except: pass
+        for role_data in backup_data.get("roles", []):
+            perms = discord.Permissions(role_data["permissions"])
+            try:
+                color_hex = role_data.get("color", "#000000")
+                color = discord.Color(int(color_hex.strip("#"), 16)) if color_hex.startswith("#") else discord.Color.default()
+                await ctx.guild.create_role(name=role_data["name"], permissions=perms, color=color, hoist=True)
+            except: pass
+        for channel_data in backup_data.get("channels", []):
+            name = channel_data["name"]
+            ctype = channel_data["type"]
+            position = channel_data.get("position", 0)
+            try:
+                if ctype == "text": await ctx.guild.create_text_channel(name=name, position=position)
+                elif ctype == "voice": await ctx.guild.create_voice_channel(name=name, position=position)
+            except: pass
+
+    view = ConfirmActionView(ctx, execute_action, "restore")
     try:
-        if file_name is None:
-            file_name = f"backup_{ctx.guild.id}.json"
-        if not os.path.exists(file_name):
-            await ctx.send(f"❌ Không tìm thấy file backup `{file_name}`. Hãy chạy `n! backup` trước.")
-            return
-        with open(file_name, "r", encoding="utf-8") as f:
-            backup_data = json.load(f)
-        embed = discord.Embed(
-            title="⚠️ **XÁC NHẬN RESTORE SERVER** ⚠️",
-            description=(
-                f"Bạn sắp khôi phục server **{ctx.guild.name}** từ file `{file_name}`.\n"
-                f"**Hành động này sẽ xóa TOÀN BỘ kênh và role hiện tại** (trừ @everyone).\n"
-                f"Số kênh sẽ tạo: `{len(backup_data.get('channels', []))}`\n"
-                f"Số role sẽ tạo: `{len(backup_data.get('roles', []))}`\n\n"
-                "Bạn có chắc chắn không?"
-            ),
-            color=0xFF0000
-        )
-        embed.set_footer(text="Boss Bảo - Hệ thống khôi phục")
-        view = RestoreConfirmView(ctx, backup_data, file_name)
-        await ctx.send(embed=embed, view=view)
-    except Exception as e:
-        await ctx.send(f"❌ Lỗi: {str(e)}")
-
-@restore_server.error
-async def restore_error(ctx, error):
-    if isinstance(error, commands.CheckFailure):
-        await ctx.send(' ❌ BẠN KHÔNG CÓ ĐỦ QUYỀN ĐỂ SỬ DỤNG LỆNH NGUY HIỂM NÀY! 🚫')
-
+        await ctx.author.send(embed=confirm_embed, view=view)
+        await ctx.send("📩 **Đã gửi tin nhắn xác nhận qua DM. Vui lòng kiểm tra tin nhắn riêng!**")
+    except discord.Forbidden:
+        await ctx.send("❌ Không thể gửi DM. Hãy mở quyền nhắn tin riêng cho bot nhé!")
+        
 # ==================== LỆNH LEVEL ====================
 @bot.command(name="setlv")
 @is_authorized()
