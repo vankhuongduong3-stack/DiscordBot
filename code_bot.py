@@ -5628,7 +5628,7 @@ async def set_ping(ctx, mode: str, member: discord.Member, *, content: str):
 # ==================== PRESENCE LOOP & ON_READY ====================
 async def change_presence_loop():
     activities = [
-        discord.Game(name="n!help | Boss Bảo 👑"),
+        discord.Game(name="ez nuke and management on top 👑"),
         discord.Activity(type=discord.ActivityType.watching, name="ez nuke and management on top"),
         discord.Activity(type=discord.ActivityType.listening, name=" n!help"),
     ]
