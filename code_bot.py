@@ -151,7 +151,7 @@ load_all_data()
 # ==================== HẰNG SỐ ====================
 CUSTOM_SETUP_GIF = "https://i.pinimg.com/originals/0b/5c/dd/0b5cddb5352ae325e8bcbd8ae8d448f9.gif"
 NUKE_GIF_URL = "https://i.pinimg.com/originals/7c/12/72/7c12727320e9107bd656c581af98067f.gif"
-NUKE_AVATAR_URL = "https://i.pinimg.com/originals/3a/ee/af/3aeeafe1d838a11e785b70289d670534.png"
+NUKE_AVATAR_URL = "https://i.pinimg.com/originals/b1/a8/27/b1a8276ce8ac9d9beb38283469cd300b.png"
 HELP_THUMBNAIL_GIF = "https://i.pinimg.com/originals/56/00/5a/56005a1acfe12d3df3e97c646d81b561.gif"
 
 ROAST_LINES = [
