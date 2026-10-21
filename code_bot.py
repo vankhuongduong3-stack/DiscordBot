@@ -5713,29 +5713,28 @@ async def on_ready():
 
 # ==================== CHẠY BOT ====================
 if __name__ == "__main__":
+    print("🟢 [DEBUG 1] Đã vào được khối __main__", flush=True)
     import threading
     import time
-    import traceback # Thêm thư viện này để in lỗi chi tiết
+    import traceback
 
     try:
-        print("🌐 Đang khởi động Web Server (keep_alive)...", flush=True)
+        print("🟢 [DEBUG 2] Đang chuẩn bị chạy keep_alive...", flush=True)
         threading.Thread(target=keep_alive, daemon=True).start()
     except Exception as e:
-        print(f"❌ Lỗi khởi động keep_alive: {e}", flush=True)
+        print(f"🔴 [DEBUG 2 LỖI] Không thể chạy keep_alive: {e}", flush=True)
 
     if DISCORD_TOKEN:
         try:
-            print("⏳ Đang kết nối tới Discord...", flush=True)
+            print("🟢 [DEBUG 3] Đang kết nối tới Discord...", flush=True)
             bot.launch_time = datetime.now()
             bot.run(DISCORD_TOKEN)
         except discord.LoginFailure:
-            print("❌ Lỗi: Token không hợp lệ! Hãy kiểm tra lại trên Developer Portal.", flush=True)
-        except discord.PrivilegedIntentsRequired:
-            print("❌ Lỗi: Chưa bật Privileged Intents (Message Content, Server Members, Presence)!", flush=True)
+            print("🔴 [DEBUG 3 LỖI] Token không hợp lệ!", flush=True)
         except Exception as e:
-            print(f"❌ Lỗi khi chạy bot: {e}", flush=True)
-            traceback.print_exc() # In toàn bộ chi tiết lỗi ra log
+            print(f"🔴 [DEBUG 3 LỖI] Lỗi khi chạy bot: {e}", flush=True)
+            traceback.print_exc()
     else:
-        print("❌ Lỗi: Chưa cấu hình biến TOKEN trong Environment Variables của Render!", flush=True)
+        print("🔴 [DEBUG 4 LỖI] Chưa cấu hình biến TOKEN!", flush=True)
         while True:
             time.sleep(60)
