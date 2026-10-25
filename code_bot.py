@@ -5737,4 +5737,4 @@ if __name__ == "__main__":
     else:
         print("🔴 [DEBUG 4 LỖI] Chưa cấu hình biến TOKEN!", flush=True)
         while True:
-            time.sleep(60)
+            time.sleep(2)
