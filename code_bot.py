@@ -53,7 +53,7 @@ bot.remove_command('help')
 # ==================== BIẾN TOÀN CỤC ====================
 spam_task_running = None
 is_spamming = False
-is_roasting = False  # <--- THÊM DÒNG NÀY VÀO
+is_roasting = False  
 bot_enabled = True
 
 SERVER_LOG_CHANNELS = {}
@@ -73,6 +73,50 @@ user_effects = {}
 
 webhooks = {}
 
+# ==================== HELPER CHỐNG RATE LIMIT 429 ====================
+async def safe_call(coro_func, *args, max_retries=5, base_delay=2.0, **kwargs):
+    """
+    Gọi 1 hàm async, tự động retry khi gặp 429 với exponential backoff.
+    Dùng cho: create_channel, create_role, delete, send, edit...
+    """
+    for attempt in range(max_retries):
+        try:
+            return await coro_func(*args, **kwargs)
+        except discord.HTTPException as e:
+            if e.status == 429:
+                retry_after = getattr(e, 'retry_after', None)
+                if retry_after:
+                    wait = float(retry_after) + 1.0
+                else:
+                    wait = base_delay * (2 ** attempt)
+                wait = min(wait, 60.0)
+                print(f"⚠️ [429] Rate limit, chờ {wait:.1f}s rồi thử lại ({attempt+1}/{max_retries})")
+                await asyncio.sleep(wait)
+            elif 500 <= e.status < 600:
+                wait = base_delay * (2 ** attempt)
+                await asyncio.sleep(wait)
+            else:
+                return None
+        except Exception:
+            return None
+    return None
+
+
+async def safe_send(channel, *args, **kwargs):
+    """Gửi tin nhắn an toàn, chống 429."""
+    return await safe_call(channel.send, *args, **kwargs)
+
+
+async def batch_safe(tasks, batch_size=5, delay_between_batches=1.5):
+    """Chạy các coroutine theo batch nhỏ, chống 429."""
+    results = []
+    for i in range(0, len(tasks), batch_size):
+        batch = tasks[i:i+batch_size]
+        res = await asyncio.gather(*batch, return_exceptions=True)
+        results.extend(res)
+        if i + batch_size < len(tasks):
+            await asyncio.sleep(delay_between_batches)
+    return results
 # ==================== BIẾN TOÀN CỤC MỚI ====================
 WELCOME_MESSAGES = {}
 GOODBYE_MESSAGES = {}
@@ -5710,6 +5754,94 @@ async def on_ready():
             except Exception as e:
                 print(f"❌ Lỗi khi đồng bộ lệnh: {e}")
         asyncio.create_task(sync_commands())
+        
+# ==================== LỆNH STATUS ====================
+@bot.command(name="status")
+async def bot_status(ctx):
+    try:
+        # Lấy hoạt động hiện tại
+        activity = bot.activity
+        if activity:
+            activity_type_map = {
+                discord.ActivityType.playing: "🎮 Đang chơi",
+                discord.ActivityType.watching: "👀 Đang xem",
+                discord.ActivityType.listening: "🎧 Đang nghe",
+                discord.ActivityType.streaming: "📺 Đang phát trực tiếp",
+                discord.ActivityType.competing: "🏆 Đang thi đấu"
+            }
+            activity_str = f"{activity_type_map.get(activity.type, '❓')} **{activity.name}**"
+        else:
+            activity_str = "❌ Không có hoạt động"
+
+        # Lấy trạng thái online
+        status_map = {
+            discord.Status.online: "🟢 Online",
+            discord.Status.idle: "🟡 Idle (Treo máy)",
+            discord.Status.dnd: "🔴 Do Not Disturb (Không làm phiền)",
+            discord.Status.offline: "⚫ Offline (Ẩn)"
+        }
+        current_status = ctx.guild.me.status if ctx.guild else bot.status
+        status_str = status_map.get(current_status, "❓ Không rõ")
+
+        # Ping
+        latency = round(bot.latency * 1000)
+
+        # Số server & thành viên
+        guild_count = len(bot.guilds)
+        member_count = sum(g.member_count or 0 for g in bot.guilds)
+
+        # Uptime
+        if hasattr(bot, 'start_time'):
+            uptime = datetime.now() - bot.start_time
+            total_seconds = int(uptime.total_seconds())
+            days, remainder = divmod(total_seconds, 86400)
+            hours, remainder = divmod(remainder, 3600)
+            minutes, seconds = divmod(remainder, 60)
+            uptime_str = f"`{days} ngày, {hours} giờ, {minutes} phút, {seconds} giây`"
+        else:
+            uptime_str = "`Không rõ`"
+
+        embed = discord.Embed(
+            title=f"📊 TRẠNG THÁI BOT: {bot.user.name}",
+            description=f"🤖 **Bot:** {bot.user.mention}\n🆔 **ID:** `{bot.user.id}`",
+            color=0x00FF00,
+            timestamp=datetime.now()
+        )
+        embed.set_thumbnail(url=bot.user.display_avatar.url)
+        embed.add_field(name="📡 Trạng thái", value=status_str, inline=True)
+        embed.add_field(name="💫 Hoạt động", value=activity_str, inline=True)
+        embed.add_field(name="🏓 Ping", value=f"`{latency}ms`", inline=True)
+        embed.add_field(name="🌐 Số server", value=f"`{guild_count}`", inline=True)
+        embed.add_field(name="👥 Tổng thành viên", value=f"`{member_count}`", inline=True)
+        embed.add_field(name="⏱️ Uptime", value=uptime_str, inline=False)
+        embed.set_footer(text="Hệ thống Boss Bảo 💖", icon_url=ctx.author.display_avatar.url)
+        await ctx.send(embed=embed)
+    except Exception as e:
+        await ctx.send(f"❌ Lỗi khi lấy trạng thái: {str(e)}")
+
+
+@bot_status.error
+async def bot_status_error(ctx, error):
+    await ctx.send(f"❌ Lỗi: {str(error)}")
+    
+# ==================== ON_READY ====================
+@bot.event
+async def on_ready():
+    print(f"Logged in as {bot.user} (ID: {bot.user.id})")
+    print("✨ Bot đã sẵn sàng phục vụ Boss Bảo!")
+
+    if not hasattr(bot, 'start_time'):
+        bot.start_time = datetime.now()
+
+    activity = discord.Activity(
+        type=discord.ActivityType.watching,
+        name="Boss Bảo 💖 | n!status"
+    )
+    try:
+        await bot.change_presence(status=discord.Status.online, activity=activity)
+    except Exception as e:
+        print(f"⚠️ Không thể đặt trạng thái: {e}")
+
 
 # ==================== CHẠY BOT ====================
 if __name__ == "__main__":
@@ -5718,19 +5850,25 @@ if __name__ == "__main__":
     import time
     import traceback
 
+    # keep_alive là optional — nếu không có thì bỏ qua
     try:
-        print("🟢 [DEBUG 2] Đang chuẩn bị chạy keep_alive...", flush=True)
+        from keep_alive import keep_alive  # nếu bạn có file keep_alive.py
+        print("🟢 [DEBUG 2] Đang chạy keep_alive...", flush=True)
         threading.Thread(target=keep_alive, daemon=True).start()
+    except ImportError:
+        print("🟡 [DEBUG 2] Không tìm thấy keep_alive, bỏ qua.", flush=True)
     except Exception as e:
-        print(f"🔴 [DEBUG 2 LỖI] Không thể chạy keep_alive: {e}", flush=True)
+        print(f"🔴 [DEBUG 2 LỖI] keep_alive lỗi: {e}", flush=True)
 
     if DISCORD_TOKEN:
         try:
             print("🟢 [DEBUG 3] Đang kết nối tới Discord...", flush=True)
-            bot.launch_time = datetime.now()
-            bot.run(DISCORD_TOKEN)
+            bot.start_time = datetime.now()
+            bot.run(DISCORD_TOKEN, reconnect=True)
         except discord.LoginFailure:
             print("🔴 [DEBUG 3 LỖI] Token không hợp lệ!", flush=True)
+        except discord.PrivilegedIntentsRequired:
+            print("🔴 [DEBUG 3 LỖI] Cần bật Privileged Intents (Message Content, Members) trên Discord Developer Portal!", flush=True)
         except Exception as e:
             print(f"🔴 [DEBUG 3 LỖI] Lỗi khi chạy bot: {e}", flush=True)
             traceback.print_exc()
