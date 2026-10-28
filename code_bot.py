@@ -5049,13 +5049,13 @@ async def on_message(message):
         print(f"🔴 [LỖI EXP] {e}")
 
     # ==============================================
-    # 6. XỬ LÝ LỆNH "nuked" ALIAS
+    # 6. XỬ LÝ LỆNH "no name 01" ALIAS
     # ==============================================
     try:
         if message.content.lower().startswith("nuked"):
-            content_without_prefix = message.content[len("nuked "):].strip() if len(message.content) > 5 else ""
+            content_without_prefix = message.content[len("no name 01 "):].strip() if len(message.content) > 5 else ""
             if content_without_prefix == "":
-                await message.reply("ơi gì vậy sài lệnh thì cứ nuked + lệnh nha")
+                await message.reply("ơi gì vậy sài lệnh thì cứ n! + lệnh nha")
             else:
                 ctx = await bot.get_context(message)
                 if ctx.command is None:
