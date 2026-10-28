@@ -5861,17 +5861,34 @@ if __name__ == "__main__":
         print(f"🔴 [DEBUG 2 LỖI] keep_alive lỗi: {e}", flush=True)
 
     if DISCORD_TOKEN:
-        try:
-            print("🟢 [DEBUG 3] Đang kết nối tới Discord...", flush=True)
-            bot.start_time = datetime.now()
-            bot.run(DISCORD_TOKEN, reconnect=True)
-        except discord.LoginFailure:
-            print("🔴 [DEBUG 3 LỖI] Token không hợp lệ!", flush=True)
-        except discord.PrivilegedIntentsRequired:
-            print("🔴 [DEBUG 3 LỖI] Cần bật Privileged Intents (Message Content, Members) trên Discord Developer Portal!", flush=True)
-        except Exception as e:
-            print(f"🔴 [DEBUG 3 LỖI] Lỗi khi chạy bot: {e}", flush=True)
-            traceback.print_exc()
+        max_retries = 5
+        for attempt in range(1, max_retries + 1):
+            try:
+                print(f"🟢 [DEBUG 3] Đang kết nối tới Discord (Lần thử {attempt}/{max_retries})...", flush=True)
+                bot.start_time = datetime.now()
+                bot.run(DISCORD_TOKEN, reconnect=True)
+                break  # Nếu chạy thành công (không lỗi) thì thoát vòng lặp
+            except discord.LoginFailure:
+                print("🔴 [DEBUG 3 LỖI] Token không hợp lệ! Vui lòng kiểm tra lại.", flush=True)
+                break
+            except discord.PrivilegedIntentsRequired:
+                print("🔴 [DEBUG 3 LỖI] Cần bật Privileged Intents (Message Content, Members) trên Discord Developer Portal!", flush=True)
+                break
+            except discord.HTTPException as e:
+                if e.status == 429:
+                    wait_time = 60 * attempt  # Chờ 60s, 120s, 180s... trước khi thử lại
+                    print(f"🔴 [DEBUG 3 LỖI] Dính Rate Limit toàn cầu (429). Đang chờ {wait_time} giây trước khi thử lại...", flush=True)
+                    time.sleep(wait_time)
+                else:
+                    print(f"🔴 [DEBUG 3 LỖI] Lỗi HTTP khác: {e}", flush=True)
+                    traceback.print_exc()
+                    break
+            except Exception as e:
+                print(f"🔴 [DEBUG 3 LỖI] Lỗi không xác định: {e}", flush=True)
+                traceback.print_exc()
+                break
+        else:
+            print("🔴 [DEBUG 3 LỖI] Đã thử lại nhiều lần nhưng vẫn thất bại. Dừng bot.", flush=True)
     else:
         print("🔴 [DEBUG 4 LỖI] Chưa cấu hình biến TOKEN!", flush=True)
         while True:
