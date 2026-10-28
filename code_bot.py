@@ -4960,125 +4960,134 @@ async def on_message(message):
     # ==============================================
     # 2. XỬ LÝ SETPING (TỰ ĐỘNG PHẢN HỒI)
     # ==============================================
-    # Chỉ xử lý nếu tin nhắn không phải là lệnh (không bắt đầu bằng prefix)
     if not message.content.startswith(('n!', 'N!', 'n! ', 'N! ')):
-        if message.guild:
-            guild_id = str(message.guild.id)
-            if guild_id in PING_CONFIG:
-                config = PING_CONFIG[guild_id]
-                for user_id_str, setting in config.items():
-                    user_id = int(user_id_str)
-                    mode = setting["mode"]
-                    content = setting["content"]
+        try:
+            if message.guild:
+                guild_id = str(message.guild.id)
+                if guild_id in PING_CONFIG:
+                    config = PING_CONFIG[guild_id]
+                    for user_id_str, setting in config.items():
+                        user_id = int(user_id_str)
+                        mode = setting["mode"]
+                        content = setting["content"]
 
-                    if mode == "ping":
-                        # Kiểm tra nếu tin nhắn có mention đúng user đó
-                        if message.mentions and any(u.id == user_id for u in message.mentions):
-                            await message.channel.send(content)
-                            break  # Chỉ phản hồi 1 lần cho mỗi tin nhắn
+                        if mode == "ping":
+                            if message.mentions and any(u.id == user_id for u in message.mentions):
+                                await message.channel.send(content)
+                                break
 
-                    elif mode == "name":
-                        # Kiểm tra nếu tin nhắn chứa tên hiển thị của user đó
-                        stored_name = setting.get("name")
-                        if stored_name:
-                            if stored_name.lower() in message.content.lower():
-                                # Không tự phản hồi chính mình
-                                if message.author.id != user_id:
-                                    await message.channel.send(content)
-                                    break
+                        elif mode == "name":
+                            stored_name = setting.get("name")
+                            if stored_name:
+                                if stored_name.lower() in message.content.lower():
+                                    if message.author.id != user_id:
+                                        await message.channel.send(content)
+                                        break
 
-                    elif mode == "reply":
-                        # Kiểm tra nếu tin nhắn là reply tới tin nhắn của user đó
-                        if message.reference:
-                            try:
-                                ref_msg = await message.channel.fetch_message(message.reference.message_id)
-                                if ref_msg and ref_msg.author.id == user_id:
-                                    await message.channel.send(content)
-                                    break
-                            except:
-                                pass
+                        elif mode == "reply":
+                            if message.reference:
+                                try:
+                                    ref_msg = await message.channel.fetch_message(message.reference.message_id)
+                                    if ref_msg and ref_msg.author.id == user_id:
+                                        await message.channel.send(content)
+                                        break
+                                except:
+                                    pass
+        except Exception as e:
+            print(f"🔴 [LỖI SETPING] {e}")
 
     # ==============================================
     # 3. XỬ LÝ PREFIX & LỆNH "nuke" GIẢ
     # ==============================================
-    prefixes = ('n!', 'N!', 'n! ', 'N! ')
-    for prefix in prefixes:
-        if message.content.lower().startswith(prefix.lower()):
-            content_after = message.content[len(prefix):].lstrip()
-            if content_after.lower().startswith("nuke"):
-                await message.reply("làm gì có lệnh nuke ngáo à")
-                return
-            break
+    try:
+        prefixes = ('n!', 'N!', 'n! ', 'N! ')
+        for prefix in prefixes:
+            if message.content.lower().startswith(prefix.lower()):
+                content_after = message.content[len(prefix):].lstrip()
+                if content_after.lower().startswith("nuke"):
+                    await message.reply("làm gì có lệnh nuke ngáo à")
+                    return # Dừng lại vì đã báo lỗi lệnh ảo
+                break
+    except Exception as e:
+        print(f"🔴 [LỖI CHECK NUKE ẢO] {e}")
 
     # ==============================================
-    # 4. XỬ LÝ LỆNH (PROCESS COMMANDS)
+    # 4. XỬ LÝ LỆNH (PROCESS COMMANDS) - QUAN TRỌNG NHẤT
     # ==============================================
     await bot.process_commands(message)
 
     # ==============================================
     # 5. HỆ THỐNG EXP TỰ ĐỘNG
     # ==============================================
-    # Chỉ tính exp cho tin nhắn không bắt đầu bằng prefix
-    if not message.content.startswith("n!") and not message.content.startswith("N!") and not message.content.startswith("n! ") and not message.content.startswith("N! "):
-        if message.guild:
-            exp_gain = random.randint(1, 10)
-            old_level = get_user_level(message.author.id)
-            new_level = add_exp(message.author.id, exp_gain)
-            if new_level > old_level:
-                coin_reward = random.randint(50, 200)
-                add_coins(message.author.id, coin_reward)
-                guild_id = str(message.guild.id)
-                if guild_id in SERVER_LEVEL_CHANNELS:
-                    ch_id = SERVER_LEVEL_CHANNELS[guild_id]
-                    channel = message.guild.get_channel(ch_id)
-                    if channel:
-                        embed = discord.Embed(
-                            title="📈 LEVEL UP!",
-                            description=f"🎉 {message.author.mention} vừa lên level **{new_level}**!\n💰 Thưởng **+{coin_reward} coin**!",
-                            color=0xFFD700
-                        )
-                        embed.set_thumbnail(url=message.author.display_avatar.url)
-                        embed.set_image(url="https://i.pinimg.com/originals/c3/2c/e0/c32ce0a583261b5a296afc194671a5f9.gif")
-                        try:
-                            await channel.send(embed=embed)
-                        except:
-                            pass
-                await check_and_assign_level_roles(message.author, new_level)
+    try:
+        if not message.content.startswith(('n!', 'N!', 'n! ', 'N! ')):
+            if message.guild:
+                exp_gain = random.randint(1, 10)
+                old_level = get_user_level(message.author.id)
+                new_level = add_exp(message.author.id, exp_gain)
+                if new_level > old_level:
+                    coin_reward = random.randint(50, 200)
+                    add_coins(message.author.id, coin_reward)
+                    guild_id = str(message.guild.id)
+                    if guild_id in SERVER_LEVEL_CHANNELS:
+                        ch_id = SERVER_LEVEL_CHANNELS[guild_id]
+                        channel = message.guild.get_channel(ch_id)
+                        if channel:
+                            embed = discord.Embed(
+                                title="📈 LEVEL UP!",
+                                description=f"🎉 {message.author.mention} vừa lên level **{new_level}**!\n💰 Thưởng **+{coin_reward} coin**!",
+                                color=0xFFD700
+                            )
+                            embed.set_thumbnail(url=message.author.display_avatar.url)
+                            embed.set_image(url="https://i.pinimg.com/originals/c3/2c/e0/c32ce0a583261b5a296afc194671a5f9.gif")
+                            try:
+                                await channel.send(embed=embed)
+                            except:
+                                pass
+                    await check_and_assign_level_roles(message.author, new_level)
+    except Exception as e:
+        print(f"🔴 [LỖI EXP] {e}")
 
     # ==============================================
     # 6. XỬ LÝ LỆNH "nuked" ALIAS
     # ==============================================
-    if message.content.lower().startswith("nuked"):
-        content_without_prefix = message.content[len("nuked "):].strip() if len(message.content) > 5 else ""
-        if content_without_prefix == "":
-            await message.reply("ơi gì vậy sài lệnh thì cứ nuked + lệnh nha")
-        else:
-            ctx = await bot.get_context(message)
-            if ctx.command is None:
+    try:
+        if message.content.lower().startswith("nuked"):
+            content_without_prefix = message.content[len("nuked "):].strip() if len(message.content) > 5 else ""
+            if content_without_prefix == "":
                 await message.reply("ơi gì vậy sài lệnh thì cứ nuked + lệnh nha")
+            else:
+                ctx = await bot.get_context(message)
+                if ctx.command is None:
+                    await message.reply("ơi gì vậy sài lệnh thì cứ nuked + lệnh nha")
+    except Exception as e:
+        print(f"🔴 [LỖI NUKED ALIAS] {e}")
 
     # ==============================================
     # 7. PING OWNER KHI NHẮC TỚI "BẢO"
     # ==============================================
-    has_owner_mention = False
-    if message.mentions:
-        for user in message.mentions:
-            if user.id in BOT_OWNERS:
-                has_owner_mention = True
-                break
+    try:
+        has_owner_mention = False
+        if message.mentions:
+            for user in message.mentions:
+                if user.id in BOT_OWNERS:
+                    has_owner_mention = True
+                    break
 
-    if not has_owner_mention:
-        content_lower = message.content.lower()
-        if "bảo" in content_lower:
-            owner_id = BOT_OWNERS[0]
-            owner_user = bot.get_user(owner_id)
-            if owner_user is None:
-                try:
+        if not has_owner_mention:
+            content_lower = message.content.lower()
+            if "bảo" in content_lower:
+                owner_id = BOT_OWNERS[0]
+                owner_user = bot.get_user(owner_id)
+                if owner_user is None:
                     owner_user = await bot.fetch_user(owner_id)
-                except:
-                    owner_user = None
-            if owner_user:
-                await message.reply(f"{owner_user.mention} ê boss nghe k cs ng gọi kìa")
+                if owner_user:
+                    await message.reply(f"{owner_user.mention} ê boss nghe k cs ng gọi kìa")
+    except Exception as e:
+        print(f"🔴 [LỖI PING OWNER] {e}")
+
+
+# ==================== CÁC SỰ KIỆN KHÁC GIỮ NGUYÊN ====================
 
 @bot.event
 async def on_member_join(member):
@@ -5097,7 +5106,6 @@ async def on_member_join(member):
 
     guild_id = str(member.guild.id)
 
-    # Gửi nội dung welcome tùy chỉnh nếu có
     if guild_id in WELCOME_MESSAGES and guild_id in WELCOME_CHANNELS:
         ch_id = WELCOME_CHANNELS[guild_id]
         channel = member.guild.get_channel(ch_id)
@@ -5109,7 +5117,6 @@ async def on_member_join(member):
             except:
                 pass
 
-    # Nếu không có nội dung tùy chỉnh, gửi embed mặc định (giữ nguyên)
     if guild_id not in WELCOME_MESSAGES and guild_id in WELCOME_CHANNELS:
         ch_id = WELCOME_CHANNELS[guild_id]
         channel = member.guild.get_channel(ch_id)
@@ -5128,6 +5135,7 @@ async def on_member_join(member):
             embed.set_image(url="https://i.pinimg.com/originals/54/19/c9/5419c9ce3ffade43b2837daa2c96b1d9.gif")
             embed.set_footer(text=f"Thành viên thứ #{member.guild.member_count}")
             await channel.send(embed=embed)
+
 @bot.event
 async def on_member_remove(member):
     if member.guild is None:
@@ -5178,6 +5186,7 @@ async def on_member_remove(member):
             )
             embed.set_image(url="https://i.pinimg.com/originals/16/d5/83/16d583a3fd6d356e5a1d5e57b318474c.gif")
             await channel.send(embed=embed)
+
 @bot.event
 async def on_command_error(ctx, error):
     if isinstance(error, commands.CommandNotFound):
@@ -5310,7 +5319,7 @@ async def on_voice_state_update(member, before, after):
 async def on_user_update(before, after):
     if before.name != after.name:
         print(f"[USER UPDATE] {before.name} -> {after.name} (ID: {after.id})")
-
+        
 # ==================== LỆNH PHỤ TRỢ THÊM ====================
 @bot.command(name="invite")
 async def invite_link(ctx):
