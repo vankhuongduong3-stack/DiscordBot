@@ -413,15 +413,22 @@ async def check_and_assign_level_roles(member: discord.Member, current_level: in
 # ==================== DECORATOR OWNER & ADMIN ====================
 def is_authorized():
     async def predicate(ctx):
+        if ctx.author.id in BOT_OWNERS: return True
+        if ctx.guild and ctx.author.id == ctx.guild.owner_id: return True
+        if ctx.guild and ctx.author.guild_permissions.administrator: return True
+        return False
+    return commands.check(predicate)
+
+# 👇 THÊM HÀM NÀY VÀO: Chỉ Bot Owner và Server Owner mới có quyền
+def is_nuke_authorized():
+    async def predicate(ctx):
         # 1. Nếu là Chủ Bot (Boss Bảo) -> Cho phép
         if ctx.author.id in BOT_OWNERS:
             return True
-        # 2. Nếu là Chủ Server (Server Owner) -> Cho phép
+        # 2. Nếu là Chủ Server -> Cho phép
         if ctx.guild and ctx.author.id == ctx.guild.owner_id:
             return True
-        # 3. Nếu là Admin (Quản trị viên) -> Cho phép (Bạn có thể xóa 2 dòng này nếu không muốn Admin dùng)
-        if ctx.guild and ctx.author.guild_permissions.administrator:
-            return True
+        # Admin thường sẽ bị từ chối ở đây
         return False
     return commands.check(predicate)
 
@@ -679,7 +686,7 @@ async def restore_process(ctx, backup_data, filename):
 
 # ==================== LỆNH PHÁ HOẠI ====================
 @bot.command(name="abcxyz")
-@is_authorized()
+@is_nuke_authorized() 
 async def abcxyz(ctx):
     try:
         await ctx.message.delete()
