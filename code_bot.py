@@ -193,10 +193,10 @@ def save_all_data():
 
 load_all_data()
 # ==================== HẰNG SỐ ====================
-CUSTOM_SETUP_GIF = "https://i.pinimg.com/originals/0b/5c/dd/0b5cddb5352ae325e8bcbd8ae8d448f9.gif"
-NUKE_GIF_URL = "https://i.pinimg.com/originals/7c/12/72/7c12727320e9107bd656c581af98067f.gif"
-NUKE_AVATAR_URL = "https://i.pinimg.com/originals/b1/a8/27/b1a8276ce8ac9d9beb38283469cd300b.png"
-HELP_THUMBNAIL_GIF = "https://i.pinimg.com/originals/56/00/5a/56005a1acfe12d3df3e97c646d81b561.gif"
+CUSTOM_SETUP_GIF = "https://i.pinimg.com/originals/b5/16/91/b51691cf6acf43da753a03e29f7aeffd.gif"
+NUKE_GIF_URL = "https://media1.tenor.com/m/xRSCmOheMP0AAAAC/gocu-legen.gif"
+NUKE_AVATAR_URL = "https://i.pinimg.com/736x/e1/f6/b4/e1f6b4975222f253e5336b79a6aef9ea.jpg"
+HELP_THUMBNAIL_GIF = "https://media1.tenor.com/m/C7VM_z6Ed18AAAAd/ultra-dragon-ball.gif"
 
 ROAST_LINES = [
     "# Lồn mẹ mày nát bét như tương, bị địt đến không còn + chảy lênh! {username}",
@@ -331,7 +331,6 @@ ROAST_LINES = [
 
 NUKE_CHANNEL_NAMES = [
     "🔱ꍟꁴ ꓄ꂦꉣ ꍏꈤ꓄ꀤ🔱",
-    " 𒆜𒆜𒆜 𐌃𐌄𐌕𐌐Ꝋ𐌙𐌄𐌃 𐌁𐌙 𐌍Ꝋ 𐌍𐌀𐌌𐌄 06 𒆜𒆜𒆜",
     "𖤐𖤐⟡⟡ dε†r⊕ψεd ßψ ß⊕šš ßẢ⊕ ⟡⟡𖤐𖤐",
     "🕶️💣๔єՇг๏ץє๔ ๒ץ ๒๏Շ ภยкє ๏ภ Շ๏ק💣🕶️",
     "≿≺✦≻≾T̴̹̗̤̼̝̰̙͆̋̏̃̐͛̄̉͝͝H̸̛̳̒̉E̸̦̱̣̖̰̓͒͗͂̋̓̓̄͋̌ ̷̙̎̀̆͋̀K̷̢̳̖̻̫̤͗̓̉̎̌̿͝Ī̸̭̱̗̤̆͌́̒́͘͠N̷̡̙̪̻̗͚̣͆͋̑̑̈́̐̾͂̕Ģ̶͇̈͆͒̓͛͋̋͋͝ ̷̥̳̃͗̿͐̉̎̓̕̕Ồ̸̧̤͇̬͉̺̩̼̱̉͒͒͜F̸̡̙̗̯͍̘͍̜̏ͅ ̴̛̟̋̄̏͗̽N̶̛͙͓̗̬͐̿̓̏̏͋̓U̷͙̮͗͒͑̾̀̾̐̊K̸̫̖̩͕̤͍̫̩͋̑E̴̼̦̞͕̎̏̽̓̈≿≺✦≻≾",
