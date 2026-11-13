@@ -194,9 +194,9 @@ def save_all_data():
 load_all_data()
 # ==================== HẰNG SỐ ====================
 HELP_THUMBNAIL_GIF = "https://i.pinimg.com/originals/b5/16/91/b51691cf6acf43da753a03e29f7aeffd.gif"
-NUKE_GIF_URL = "https://media1.tenor.com/m/xRSCmOheMP0AAAAC/gocu-legen.gif"
+NUKE_GIF_URL = "https://i.pinimg.com/originals/d1/84/2d/d1842d02a43686e723ac3c7eff3a5672.gif"
 NUKE_AVATAR_URL = "https://i.pinimg.com/736x/e1/f6/b4/e1f6b4975222f253e5336b79a6aef9ea.jpg"
-CUSTOM_SETUP_GIF = "https://media1.tenor.com/m/C7VM_z6Ed18AAAAd/ultra-dragon-ball.gif"
+CUSTOM_SETUP_GIF = "https://i.pinimg.com/originals/a1/9a/e3/a19ae37805f1e8562a9f5514083fdb49.gif"
 
 ROAST_LINES = [
     "# Lồn mẹ mày nát bét như tương, bị địt đến không còn + chảy lênh! {username}",
